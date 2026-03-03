@@ -1,4 +1,4 @@
-# Surxon Taxi MVP (Uzbekiston intercity + qishloq-shahar)
+ï»¿# SafarUz MVP (Uzbekiston intercity + qishloq-shahar)
 
 Ushbu repo ikki qismdan iborat:
 - `backend`: FastAPI + PostgreSQL
@@ -8,13 +8,13 @@ Ushbu repo ikki qismdan iborat:
 ## Asosiy biznes qoidalari (MVP)
 - 2 ta rol: `driver` (taxist), `passenger` (mijoz)
 - `TripGig`: haydovchi safar yaratadi
-- `RequestGig`: mijoz so‘rov yaratadi
+- `RequestGig`: mijoz soâ€˜rov yaratadi
 - Match sharti:
-  - vaqt oralig‘i kesishishi: `driver_start <= passenger_end AND driver_end >= passenger_start`
-  - bo‘sh joy yetarli bo‘lishi
-  - yo‘nalish matn mosligi (`exact/contains`)
+  - vaqt oraligâ€˜i kesishishi: `driver_start <= passenger_end AND driver_end >= passenger_start`
+  - boâ€˜sh joy yetarli boâ€˜lishi
+  - yoâ€˜nalish matn mosligi (`exact/contains`)
 - Claim qoidasi:
-  - bitta so‘rovga eng ko‘pi bilan 10 ta haydovchi claim bera oladi
+  - bitta soâ€˜rovga eng koâ€˜pi bilan 10 ta haydovchi claim bera oladi
   - birinchi kelgan birinchi oladi
   - 10 ga yetganda status `locked`
   - race condition oldini olish uchun PostgreSQL transaction + `SELECT ... FOR UPDATE`
@@ -24,7 +24,7 @@ Ushbu repo ikki qismdan iborat:
   - bitta claim `accepted`, qolganlari `rejected`
   - tripda `seats_taken` yangilanadi
   - chat yaratiladi
-  - haydovchi telefoni faqat shu bosqichdan keyin ko‘rinadi
+  - haydovchi telefoni faqat shu bosqichdan keyin koâ€˜rinadi
 
 ## 1) Infra ishga tushirish
 `infra` ichida:
@@ -39,14 +39,14 @@ PostgreSQL: `localhost:5432`, DB: `taxi_db`, user/pass: `taxi/taxi`
 `backend/.env` yarating:
 
 ```env
-APP_NAME=Surxon Taxi MVP
+APP_NAME=SafarUz MVP
 ENV=dev
 SECRET_KEY=super-secret-key-change-me
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 DATABASE_URL=postgresql+psycopg2://taxi:taxi@localhost:5432/taxi_db
 ```
 
-So‘ng:
+Soâ€˜ng:
 
 ```bash
 cd backend
@@ -95,13 +95,14 @@ Agar Android emulatorda backendga ulansangiz, `10.0.2.2:8000` ishlatilgan.
 - tekshirish kodi doim: `0000`
 
 ## MVP route matching hozircha
-Hozirgi implementatsiya matn bo‘yicha `exact/contains`.
+Hozirgi implementatsiya matn boâ€˜yicha `exact/contains`.
 
 Keyin yaxshilash mumkin:
 - viloyat/tuman/city reference jadvallari
 - normalizatsiya (lotin/kiril, kichik-katta harf)
-- geospatial (PostGIS) + radius bo‘yicha match
+- geospatial (PostGIS) + radius boâ€˜yicha match
 
 ## Muhim eslatma
 UIdagi barcha foydalanuvchi matnlari Uzbek tilida yozilgan.
-Kod kommentlari inglizcha bo‘lishi mumkin.
+Kod kommentlari inglizcha boâ€˜lishi mumkin.
+

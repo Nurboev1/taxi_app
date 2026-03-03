@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+﻿from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -16,6 +16,7 @@ class PassengerRequest(Base):
     to_location: Mapped[str] = mapped_column(String(120), index=True)
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    preferred_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)
     seats_needed: Mapped[int] = mapped_column(Integer)
     status: Mapped[RequestStatus] = mapped_column(Enum(RequestStatus), default=RequestStatus.open, index=True)
     chosen_claim_id: Mapped[int | None] = mapped_column(ForeignKey("request_claims.id"), nullable=True)

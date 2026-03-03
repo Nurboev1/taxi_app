@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Login</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f766e, #145da0);
+    }
+    .card {
+      width: min(92vw, 380px);
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.2);
+    }
+    h1 { margin: 0 0 16px; font-size: 22px; }
+    label { display: block; margin: 10px 0 6px; font-weight: 600; }
+    input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: #0f766e;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .error {
+      margin-top: 10px;
+      color: #b91c1c;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <form class="card" method="post" action="/admin/login">
+    <h1>Admin Panel</h1>
+    <label>Login</label>
+    <input type="text" name="username" required />
+    <label>Parol</label>
+    <input type="password" name="password" required />
+    <button type="submit">Kirish</button>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+  </form>
+</body>
+</html>

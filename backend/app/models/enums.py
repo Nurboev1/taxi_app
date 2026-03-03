@@ -1,4 +1,4 @@
-from enum import Enum
+﻿from enum import Enum
 
 
 class UserRole(str, Enum):
@@ -26,3 +26,15 @@ class ClaimStatus(str, Enum):
     pending = "pending"
     accepted = "accepted"
     rejected = "rejected"
+    completed = "completed"
+
+
+class Gender(str, Enum):
+    male = "male"
+    female = "female"
+
+
+class AppLanguage(str, Enum):
+    uz = "uz"
+    ru = "ru"
+    en = "en"

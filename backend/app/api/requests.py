@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -9,6 +9,7 @@ from app.models.chat import Chat
 from app.models.claim import RequestClaim
 from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
 from app.models.request import PassengerRequest
+from app.models.rating import TripRating
 from app.models.trip import DriverTrip
 from app.models.user import User
 from app.schemas.request import (
@@ -32,6 +33,52 @@ def route_match(a_from: str, a_to: str, b_from: str, b_to: str) -> bool:
     return (af == bf or af in bf or bf in af) and (at == bt or at in bt or bt in at)
 
 
+def time_match_level(preferred_time, start_time, end_time) -> tuple[str, int]:
+    if preferred_time is None:
+        return "low", 1440
+    if start_time <= preferred_time <= end_time:
+        return "high", 0
+    if preferred_time < start_time:
+        gap = int((start_time - preferred_time).total_seconds() // 60)
+    else:
+        gap = int((preferred_time - end_time).total_seconds() // 60)
+    if gap <= 60:
+        return "medium", gap
+    return "low", gap
+
+
+def match_order(level: str) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get(level, 3)
+
+
+def trip_gender_stats(db: Session, trip_id: int) -> tuple[int, int]:
+    accepted_claims = db.scalars(
+        select(RequestClaim).where(RequestClaim.trip_id == trip_id, RequestClaim.status == ClaimStatus.accepted)
+    ).all()
+    male = 0
+    female = 0
+    for claim in accepted_claims:
+        req = db.scalar(select(PassengerRequest).where(PassengerRequest.id == claim.request_id))
+        if not req:
+            continue
+        passenger = db.scalar(select(User).where(User.id == req.passenger_id))
+        if not passenger or not passenger.gender:
+            continue
+        if passenger.gender.value == "male":
+            male += req.seats_needed
+        elif passenger.gender.value == "female":
+            female += req.seats_needed
+    return male, female
+
+
+def driver_rating_stats(db: Session, driver_id: int) -> tuple[float, int]:
+    total = db.scalar(select(func.count(TripRating.id)).where(TripRating.driver_id == driver_id)) or 0
+    if total == 0:
+        return 0.0, 0
+    avg = db.scalar(select(func.avg(TripRating.stars)).where(TripRating.driver_id == driver_id)) or 0
+    return round(float(avg), 2), int(total)
+
+
 @router.post("/passenger/requests", response_model=PassengerRequestOut)
 def create_request(
     payload: PassengerRequestCreateIn,
@@ -42,8 +89,9 @@ def create_request(
         passenger_id=current_user.id,
         from_location=payload.from_location,
         to_location=payload.to_location,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
+        start_time=payload.preferred_time,
+        end_time=payload.preferred_time,
+        preferred_time=payload.preferred_time,
         seats_needed=payload.seats_needed,
     )
     db.add(req)
@@ -77,35 +125,40 @@ def get_matches(
     trips = db.scalars(
         select(DriverTrip)
         .options(joinedload(DriverTrip.driver))
-        .where(
-            DriverTrip.status == TripStatus.open,
-            DriverTrip.start_time <= req.end_time,
-            DriverTrip.end_time >= req.start_time,
-        )
+        .where(DriverTrip.status == TripStatus.open)
     ).all()
 
-    out: list[MatchTripOut] = []
+    preferred = req.preferred_time or req.start_time
+    scored: list[tuple[MatchTripOut, int, int]] = []
     for trip in trips:
         seats_available = trip.seats_total - trip.seats_taken
         if seats_available < req.seats_needed:
             continue
         if not route_match(req.from_location, req.to_location, trip.from_location, trip.to_location):
             continue
-        out.append(
-            MatchTripOut(
-                id=trip.id,
-                driver_id=trip.driver_id,
-                driver_name=trip.driver.name,
-                from_location=trip.from_location,
-                to_location=trip.to_location,
-                start_time=trip.start_time,
-                end_time=trip.end_time,
-                seats_total=trip.seats_total,
-                seats_taken=trip.seats_taken,
-                price_per_seat=trip.price_per_seat,
+        level, gap = time_match_level(preferred, trip.start_time, trip.end_time)
+        scored.append(
+            (
+                MatchTripOut(
+                    id=trip.id,
+                    driver_id=trip.driver_id,
+                    driver_name=trip.driver.name,
+                    from_location=trip.from_location,
+                    to_location=trip.to_location,
+                    start_time=trip.start_time,
+                    end_time=trip.end_time,
+                    seats_total=trip.seats_total,
+                    seats_taken=trip.seats_taken,
+                    price_per_seat=trip.price_per_seat,
+                    match_level=level,
+                    time_gap_minutes=gap,
+                ),
+                match_order(level),
+                gap,
             )
         )
-    return out
+    scored.sort(key=lambda x: (x[1], x[2], x[0].start_time))
+    return [row[0] for row in scored]
 
 
 @router.post("/requests/{request_id}/claim", response_model=ClaimOut)
@@ -144,10 +197,9 @@ def claim_request(
             if trip.status != TripStatus.open:
                 raise HTTPException(status_code=400, detail="Safar holati claim uchun mos emas")
 
-            overlap = trip.start_time <= req.end_time and trip.end_time >= req.start_time
             seats_ok = (trip.seats_total - trip.seats_taken) >= req.seats_needed
             route_ok = route_match(req.from_location, req.to_location, trip.from_location, trip.to_location)
-            if not (overlap and seats_ok and route_ok):
+            if not (seats_ok and route_ok):
                 raise HTTPException(status_code=400, detail="Safar bu so'rovga mos emas")
 
             claim = RequestClaim(request_id=request_id, driver_id=current_user.id, trip_id=trip.id)
@@ -173,11 +225,17 @@ def claim_request(
             .options(joinedload(RequestClaim.driver), joinedload(RequestClaim.trip))
             .where(RequestClaim.id == created_claim_id)
         )
+        male_count, female_count = trip_gender_stats(db, claim.trip_id)
+        avg_rating, rating_total = driver_rating_stats(db, claim.driver_id)
         return ClaimOut(
             id=claim.id,
             request_id=claim.request_id,
             driver_id=claim.driver_id,
             driver_name=claim.driver.name,
+            driver_gender=claim.driver.gender.value if claim.driver.gender else None,
+            driver_phone=claim.driver.phone if claim.driver.phone_visible else None,
+            driver_car_model=claim.driver.car_model,
+            driver_car_number=claim.driver.car_number,
             trip_id=claim.trip_id,
             from_location=claim.trip.from_location,
             to_location=claim.trip.to_location,
@@ -185,6 +243,10 @@ def claim_request(
             end_time=claim.trip.end_time,
             seats_total=claim.trip.seats_total,
             seats_taken=claim.trip.seats_taken,
+            trip_male_count=male_count,
+            trip_female_count=female_count,
+            driver_average_rating=avg_rating,
+            driver_ratings_total=rating_total,
             price_per_seat=claim.trip.price_per_seat,
             status=claim.status,
         )
@@ -217,24 +279,36 @@ def list_claims(
         .limit(10)
     ).all()
 
-    return [
-        ClaimOut(
-            id=claim.id,
-            request_id=claim.request_id,
-            driver_id=claim.driver_id,
-            driver_name=claim.driver.name,
-            trip_id=claim.trip_id,
-            from_location=claim.trip.from_location,
-            to_location=claim.trip.to_location,
-            start_time=claim.trip.start_time,
-            end_time=claim.trip.end_time,
-            seats_total=claim.trip.seats_total,
-            seats_taken=claim.trip.seats_taken,
-            price_per_seat=claim.trip.price_per_seat,
-            status=claim.status,
+    result: list[ClaimOut] = []
+    for claim in claims:
+        male_count, female_count = trip_gender_stats(db, claim.trip_id)
+        avg_rating, rating_total = driver_rating_stats(db, claim.driver_id)
+        result.append(
+            ClaimOut(
+                id=claim.id,
+                request_id=claim.request_id,
+                driver_id=claim.driver_id,
+                driver_name=claim.driver.name,
+                driver_gender=claim.driver.gender.value if claim.driver.gender else None,
+                driver_phone=claim.driver.phone if claim.driver.phone_visible else None,
+                driver_car_model=claim.driver.car_model,
+                driver_car_number=claim.driver.car_number,
+                trip_id=claim.trip_id,
+                from_location=claim.trip.from_location,
+                to_location=claim.trip.to_location,
+                start_time=claim.trip.start_time,
+                end_time=claim.trip.end_time,
+                seats_total=claim.trip.seats_total,
+                seats_taken=claim.trip.seats_taken,
+                trip_male_count=male_count,
+                trip_female_count=female_count,
+                driver_average_rating=avg_rating,
+                driver_ratings_total=rating_total,
+                price_per_seat=claim.trip.price_per_seat,
+                status=claim.status,
+            )
         )
-        for claim in claims
-    ]
+    return result
 
 
 @router.post("/requests/{request_id}/choose", response_model=ChooseDriverOut)
@@ -299,7 +373,6 @@ def choose_driver(
         db.refresh(req)
         db.refresh(chat)
 
-        # Load relations after commit without FOR UPDATE to avoid outer join lock issues.
         chosen_claim_view = db.scalar(
             select(RequestClaim)
             .options(joinedload(RequestClaim.driver), joinedload(RequestClaim.trip))
@@ -308,12 +381,14 @@ def choose_driver(
         if not chosen_claim_view:
             raise HTTPException(status_code=404, detail="Tanlangan claim topilmadi")
 
+        visible_phone = chosen_claim_view.driver.phone if chosen_claim_view.driver.phone_visible else None
+
         return ChooseDriverOut(
             request_id=req.id,
             chosen_claim_id=chosen_claim_view.id,
             driver_id=chosen_claim_view.driver_id,
             driver_name=chosen_claim_view.driver.name,
-            driver_phone=chosen_claim_view.driver.phone,
+            driver_phone=visible_phone,
             chat_id=chat.id,
             status=req.status,
         )

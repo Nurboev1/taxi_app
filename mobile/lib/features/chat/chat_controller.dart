@@ -6,7 +6,13 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 
-final chatDataProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, chatId) async {
+final myChatsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final res = await ref.read(apiClientProvider).get(Endpoints.myChats);
+  return (res.data as List).cast<Map<String, dynamic>>();
+});
+
+final chatDataProvider =
+    FutureProvider.family<Map<String, dynamic>, int>((ref, chatId) async {
   final res = await ref.read(apiClientProvider).get(Endpoints.getChat(chatId));
   return (res.data as Map).cast<String, dynamic>();
 });
@@ -45,7 +51,15 @@ class ChatActions {
   final Ref ref;
 
   Future<void> sendMessage(int chatId, String body) async {
-    await ref.read(apiClientProvider).post(Endpoints.sendMessage(chatId), data: {'body': body});
+    await ref
+        .read(apiClientProvider)
+        .post(Endpoints.sendMessage(chatId), data: {'body': body});
+    ref.invalidate(myChatsProvider);
+  }
+
+  Future<void> deleteChat(int chatId) async {
+    await ref.read(apiClientProvider).delete(Endpoints.deleteChat(chatId));
+    ref.invalidate(myChatsProvider);
     ref.invalidate(chatDataProvider(chatId));
   }
 }

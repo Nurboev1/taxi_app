@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -26,3 +26,12 @@ class ChatMessageOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ChatListItemOut(BaseModel):
+    chat_id: int
+    request_id: int
+    passenger_name: str
+    driver_name: str
+    last_message: str | None = None
+    last_message_at: datetime | None = None

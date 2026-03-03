@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
@@ -10,6 +10,7 @@ class AuthState {
     this.userId,
     this.role,
     this.phone,
+    this.profile,
     this.loading = false,
     this.error,
   });
@@ -18,6 +19,7 @@ class AuthState {
   final int? userId;
   final String? role;
   final String? phone;
+  final Map<String, dynamic>? profile;
   final bool loading;
   final String? error;
 
@@ -28,6 +30,7 @@ class AuthState {
     int? userId,
     String? role,
     String? phone,
+    Map<String, dynamic>? profile,
     bool? loading,
     String? error,
   }) {
@@ -36,6 +39,7 @@ class AuthState {
       userId: userId ?? this.userId,
       role: role ?? this.role,
       phone: phone ?? this.phone,
+      profile: profile ?? this.profile,
       loading: loading ?? this.loading,
       error: error,
     );
@@ -54,13 +58,26 @@ class AuthController extends StateNotifier<AuthState> {
     final userId = await store.readUserId();
     if (token != null) {
       state = state.copyWith(token: token, role: role, userId: userId);
+      await loadProfile();
+    }
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final res = await ref.read(apiClientProvider).get(Endpoints.myProfile);
+      state =
+          state.copyWith(profile: (res.data as Map).cast<String, dynamic>());
+    } catch (_) {
+      // silent for MVP
     }
   }
 
   Future<bool> requestOtp(String phone) async {
     try {
       state = state.copyWith(loading: true, error: null, phone: phone);
-      await ref.read(apiClientProvider).post(Endpoints.requestOtp, data: {'phone': phone});
+      await ref
+          .read(apiClientProvider)
+          .post(Endpoints.requestOtp, data: {'phone': phone});
       state = state.copyWith(loading: false, phone: phone, error: null);
       return true;
     } on DioException catch (e) {
@@ -72,7 +89,9 @@ class AuthController extends StateNotifier<AuthState> {
         loading: false,
         error: detail.isNotEmpty
             ? "OTP yuborishda xatolik: $detail"
-            : (msg.isNotEmpty ? "OTP yuborishda xatolik: $msg" : 'OTP yuborishda xatolik'),
+            : (msg.isNotEmpty
+                ? "OTP yuborishda xatolik: $msg"
+                : 'OTP yuborishda xatolik'),
       );
       return false;
     }
@@ -92,6 +111,7 @@ class AuthController extends StateNotifier<AuthState> {
       final token = res.data['access_token'] as String;
       final role = res.data['role'] as String;
       final userId = res.data['user']['id'] as int;
+      final profile = (res.data['user'] as Map).cast<String, dynamic>();
       final store = ref.read(secureStoreProvider);
       await store.saveToken(token);
       await store.saveRole(role);
@@ -101,6 +121,7 @@ class AuthController extends StateNotifier<AuthState> {
         token: token,
         role: role,
         userId: userId,
+        profile: profile,
         error: null,
       );
       return true;
@@ -113,19 +134,28 @@ class AuthController extends StateNotifier<AuthState> {
         loading: false,
         error: detail.isNotEmpty
             ? "OTP xatolik: $detail"
-            : (msg.isNotEmpty ? "OTP xatolik: $msg" : 'OTP noto‘g‘ri'),
+            : (msg.isNotEmpty ? "OTP xatolik: $msg" : 'OTP noto\'g\'ri'),
       );
       return false;
     }
   }
 
   Future<void> setRole(String role) async {
-    final res = await ref.read(apiClientProvider).post(Endpoints.setRole, data: {'role': role});
+    final res = await ref
+        .read(apiClientProvider)
+        .post(Endpoints.setRole, data: {'role': role});
     final token = res.data['access_token'] as String;
     final store = ref.read(secureStoreProvider);
     await store.saveToken(token);
     await store.saveRole(role);
     state = state.copyWith(token: token, role: role);
+    await loadProfile();
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> data) async {
+    final res =
+        await ref.read(apiClientProvider).put(Endpoints.myProfile, data: data);
+    state = state.copyWith(profile: (res.data as Map).cast<String, dynamic>());
   }
 
   Future<void> logout() async {
@@ -134,6 +164,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
+final authControllerProvider =
+    StateNotifierProvider<AuthController, AuthState>((ref) {
   return AuthController(ref);
 });

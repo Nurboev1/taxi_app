@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #fff;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #0f766e;
+    }
+    body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: #0f172a; }
+    header {
+      background: #0f172a; color: #fff; padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    a.btn { color: #fff; text-decoration: none; background: #334155; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
+    .wrap { padding: 18px; max-width: 1300px; margin: 0 auto; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab {
+      text-decoration: none; color: #0f172a; background: #e2e8f0;
+      padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 14px;
+    }
+    .tab.active { background: #0f766e; color: #fff; }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 14px;
+    }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+    .stat .k { color: var(--muted); font-size: 13px; }
+    .stat .v { margin-top: 6px; font-size: 24px; font-weight: 800; color: var(--primary); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .card h3 { margin: 0; padding: 12px; border-bottom: 1px solid var(--line); font-size: 15px; background: #f8fafc; }
+    .card .body { padding: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .filters { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    input, button {
+      border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 13px;
+    }
+    button { background: #0f766e; color: #fff; border-color: #0f766e; cursor: pointer; }
+    .btn-secondary { background: #334155; border-color: #334155; text-decoration: none; color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+    dialog {
+      border: 0; border-radius: 12px; width: min(92vw, 560px); padding: 0; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,.25);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.45); }
+    .modal-head { background: #0f172a; color: #fff; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-head button { background: #ef4444; border-color: #ef4444; }
+    .modal-body { padding: 12px; max-height: 60vh; overflow: auto; }
+    .error { color: #b91c1c; font-weight: 600; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>SafarUz Admin</strong>
+    <a class="btn" href="/admin/logout">Chiqish</a>
+  </header>
+  <div class="wrap">
+    <div class="tabs">
+      <a class="tab {% if tab == 'overview' %}active{% endif %}" href="/admin?tab=overview">Dashboard</a>
+      <a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>
+      <a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>
+      <a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Foydalanuvchilar</div><div class="v">{{ stats.users_total }}</div></div>
+      <div class="stat"><div class="k">Haydovchilar</div><div class="v">{{ stats.drivers_total }}</div></div>
+      <div class="stat"><div class="k">Yo'lovchilar</div><div class="v">{{ stats.passengers_total }}</div></div>
+      <div class="stat"><div class="k">Safarlar</div><div class="v">{{ stats.trips_total }}</div></div>
+      <div class="stat"><div class="k">So'rovlar</div><div class="v">{{ stats.requests_total }}</div></div>
+      <div class="stat"><div class="k">Claimlar</div><div class="v">{{ stats.claims_total }}</div></div>
+      <div class="stat"><div class="k">Chatlar</div><div class="v">{{ stats.chats_total }}</div></div>
+      <div class="stat"><div class="k">Xabarlar</div><div class="v">{{ stats.messages_total }}</div></div>
+      <div class="stat"><div class="k">Baholar</div><div class="v">{{ stats.ratings_total }}</div></div>
+    </div>
+
+    {% if tab == 'overview' %}
+      <div class="grid">
+        <section class="card">
+          <h3>Oxirgi foydalanuvchilar</h3>
+          <table>
+            <thead><tr><th>ID</th><th>Ism</th><th>Telefon</th><th>Rol</th><th>Sana</th></tr></thead>
+            <tbody>
+              {% for u in recent_users %}
+                <tr>
+                  <td>{{ u.id }}</td>
+                  <td>{{ u.name }}</td>
+                  <td>{{ u.phone }}</td>
+                  <td>{{ u.role.value }}</td>
+                  <td>{{ u.created_at }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h3>Oxirgi so'rovlar</h3>
+          <table>
+            <thead><tr><th>ID</th><th>Yo'nalish</th><th>O'rin</th><th>Status</th><th>Sana</th></tr></thead>
+            <tbody>
+              {% for r in recent_requests %}
+                <tr>
+                  <td>{{ r.id }}</td>
+                  <td>{{ r.from_location }} -> {{ r.to_location }}</td>
+                  <td>{{ r.seats_needed }}</td>
+                  <td>{{ r.status.value }}</td>
+                  <td>{{ r.created_at }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    {% endif %}
+
+    {% if tab == 'trips' %}
+      <section class="card">
+        <h3>Oxirgi safarlar</h3>
+        <div class="body">
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="trips" />
+            <label for="trip_date"><strong>Sana:</strong></label>
+            <input id="trip_date" type="date" name="trip_date" value="{{ selected_trip_date }}" />
+            <button type="submit">Filtrlash</button>
+            <a class="btn-secondary" href="/admin?tab=trips">Tozalash</a>
+          </form>
+          <table>
+            <thead>
+              <tr>
+                <th>Yo'lovchilar</th>
+                <th>Safar ID</th>
+                <th>Haydovchi ID</th>
+                <th>Haydovchi</th>
+                <th>Yo'nalish</th>
+                <th>Status</th>
+                <th>Boshlanish vaqti</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in trip_rows %}
+                <tr>
+                  <td>
+                    <button type="button" onclick="openPassengers({{ t.id }})">Yo'lovchilarni ko'rsatish</button>
+                  </td>
+                  <td>{{ t.id }}</td>
+                  <td>{{ t.driver_id }}</td>
+                  <td>{{ t.driver_name }} ({{ t.driver_first_name or '-' }} {{ t.driver_last_name or '-' }})</td>
+                  <td>{{ t.from_location }} -> {{ t.to_location }}</td>
+                  <td>{{ t.status }}</td>
+                  <td>{{ t.start_time }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          {% for t in trip_rows %}
+            <dialog id="pax-{{ t.id }}">
+              <div class="modal-head">
+                <strong>Safar #{{ t.id }} yo'lovchilari</strong>
+                <button type="button" onclick="closePassengers({{ t.id }})">Yopish</button>
+              </div>
+              <div class="modal-body">
+                {% if t.passengers %}
+                  <table>
+                    <thead><tr><th>User ID</th><th>Ism</th><th>Jins</th><th>Request ID</th><th>Claim</th></tr></thead>
+                    <tbody>
+                      {% for p in t.passengers %}
+                        <tr>
+                          <td>{{ p.id }}</td>
+                          <td>{{ p.name }}</td>
+                          <td>{{ p.gender }}</td>
+                          <td>{{ p.request_id }}</td>
+                          <td>{{ p.claim_status }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                {% else %}
+                  <p>Bu safarda yo'lovchilar topilmadi.</p>
+                {% endif %}
+              </div>
+            </dialog>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'users' %}
+      <section class="card">
+        <h3>Foydalanuvchi qidirish (ID bo'yicha)</h3>
+        <div class="body">
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="users" />
+            <label for="user_id"><strong>User ID:</strong></label>
+            <input id="user_id" type="number" name="user_id" value="{{ lookup_user_id }}" placeholder="Masalan: 12" />
+            <button type="submit">Qidirish</button>
+          </form>
+          {% if lookup_error %}
+            <div class="error">{{ lookup_error }}</div>
+          {% endif %}
+          {% if lookup_user %}
+            <table>
+              <tbody>
+                <tr><th>ID</th><td>{{ lookup_user.id }}</td></tr>
+                <tr><th>Ism</th><td>{{ lookup_user.name }}</td></tr>
+                <tr><th>Telefon</th><td>{{ lookup_user.phone }}</td></tr>
+                <tr><th>Rol</th><td>{{ lookup_user.role.value }}</td></tr>
+                <tr><th>Jins</th><td>{{ lookup_user.gender.value if lookup_user.gender else '-' }}</td></tr>
+                <tr><th>Til</th><td>{{ lookup_user.language.value if lookup_user.language else '-' }}</td></tr>
+                <tr><th>Mashina modeli</th><td>{{ lookup_user.car_model or '-' }}</td></tr>
+                <tr><th>Mashina raqami</th><td>{{ lookup_user.car_number or '-' }}</td></tr>
+                <tr><th>Ro'yxatdan o'tgan</th><td>{{ lookup_user.created_at }}</td></tr>
+                <tr><th>Haydovchi safarlari</th><td>{{ lookup_user_stats.driver_trips }}</td></tr>
+                <tr><th>Yo'lovchi so'rovlari</th><td>{{ lookup_user_stats.passenger_requests }}</td></tr>
+                <tr><th>Berilgan baholar</th><td>{{ lookup_user_stats.given_ratings }}</td></tr>
+                <tr><th>Olgan baholar</th><td>{{ lookup_user_stats.received_ratings }}</td></tr>
+              </tbody>
+            </table>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'driver_access' %}
+      <section class="card">
+        <h3>Haydovchi dostupini boshqarish</h3>
+        <div class="body">
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="driver_access" />
+            <label for="driver_access_user_id"><strong>User ID:</strong></label>
+            <input id="driver_access_user_id" type="number" name="driver_access_user_id" value="{{ driver_access_user_id }}" placeholder="Masalan: 12" />
+            <button type="submit">Qidirish</button>
+          </form>
+
+          {% if driver_access_error %}
+            <div class="error">{{ driver_access_error }}</div>
+          {% endif %}
+
+          {% if driver_access_status %}
+            <div><strong>Status:</strong> {{ driver_access_status }}</div>
+          {% endif %}
+
+          {% if driver_access_user %}
+            <table>
+              <tbody>
+                <tr><th>ID</th><td>{{ driver_access_user.id }}</td></tr>
+                <tr><th>Ism</th><td>{{ driver_access_user.name }}</td></tr>
+                <tr><th>Telefon</th><td>{{ driver_access_user.phone }}</td></tr>
+                <tr><th>Rol</th><td>{{ driver_access_user.role.value }}</td></tr>
+                <tr><th>Driver blocked</th><td>{{ driver_access_user.driver_blocked }}</td></tr>
+                <tr><th>Override</th><td>{{ driver_access_user.driver_access_override }}</td></tr>
+                <tr><th>Sabab</th><td>{{ driver_access_user.driver_block_reason or '-' }}</td></tr>
+                <tr><th>Unblock vaqti</th><td>{{ driver_access_user.driver_unblocked_at or '-' }}</td></tr>
+                <tr><th>Ro'yxatdan o'tgan</th><td>{{ driver_access_user.created_at }}</td></tr>
+              </tbody>
+            </table>
+            <div class="filters" style="margin-top:12px;">
+              <form method="post" action="/admin/driver-access">
+                <input type="hidden" name="user_id" value="{{ driver_access_user.id }}" />
+                <input type="hidden" name="action" value="block" />
+                <button type="submit" style="background:#b91c1c;border-color:#b91c1c;">Bloklash</button>
+              </form>
+              <form method="post" action="/admin/driver-access">
+                <input type="hidden" name="user_id" value="{{ driver_access_user.id }}" />
+                <input type="hidden" name="action" value="unblock" />
+                <button type="submit">Blokni ochish</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+  </div>
+
+  <script>
+    function openPassengers(tripId) {
+      const dlg = document.getElementById(`pax-${tripId}`);
+      if (dlg) dlg.showModal();
+    }
+    function closePassengers(tripId) {
+      const dlg = document.getElementById(`pax-${tripId}`);
+      if (dlg) dlg.close();
+    }
+  </script>
+</body>
+</html>

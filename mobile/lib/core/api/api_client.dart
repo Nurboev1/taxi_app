@@ -39,6 +39,12 @@ class ApiClient {
 
   Future<Response<dynamic>> post(String path, {Map<String, dynamic>? data}) =>
       _dio.post(path, data: data);
+
+  Future<Response<dynamic>> put(String path, {Map<String, dynamic>? data}) =>
+      _dio.put(path, data: data);
+
+  Future<Response<dynamic>> delete(String path, {Map<String, dynamic>? data}) =>
+      _dio.delete(path, data: data);
 }
 
 final apiClientProvider = Provider<ApiClient>((ref) {

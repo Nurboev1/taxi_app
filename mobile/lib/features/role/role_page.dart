@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:taxi_mobile/core/api/api_error.dart';
+import 'package:taxi_mobile/core/i18n/strings.dart';
+import 'package:taxi_mobile/core/widgets/neo_shell.dart';
 
 import '../auth/auth_controller.dart';
 
@@ -9,27 +12,115 @@ class RolePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rol tanlash')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    final lang =
+        ref.watch(authControllerProvider).profile?['language']?.toString();
+    final s = AppStrings.of(lang);
+
+    return NeoScaffold(
+      title: s.t('choose_role'),
+      child: ListView(
+        padding: const EdgeInsets.only(top: 24),
+        children: [
+          NeoPanel(
+            child: Column(
+              children: [
+                _RoleCard(
+                  icon: Icons.local_taxi_outlined,
+                  title: s.t('driver'),
+                  subtitle:
+                      'Safar e\'lonini joylash va yo\'lovchi qabul qilish',
+                  onTap: () async {
+                    try {
+                      await ref
+                          .read(authControllerProvider.notifier)
+                          .setRole('driver');
+                      if (context.mounted) context.go('/profile-setup');
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      if (apiErrorCode(e) == 'DRIVER_BLOCKED') {
+                        context.go('/driver-blocked');
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(apiErrorMessage(e,
+                              fallback: s.t('generic_error'))),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _RoleCard(
+                  icon: Icons.person_outline,
+                  title: s.t('passenger'),
+                  subtitle: 'Mos safar topish va haydovchini tanlash',
+                  onTap: () async {
+                    await ref
+                        .read(authControllerProvider.notifier)
+                        .setRole('passenger');
+                    if (context.mounted) context.go('/profile-setup');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleCard extends StatelessWidget {
+  const _RoleCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.32),
+        ),
+        child: Row(
           children: [
-            ElevatedButton(
-              onPressed: () async {
-                await ref.read(authControllerProvider.notifier).setRole('driver');
-                if (context.mounted) context.go('/driver');
-              },
-              child: const Text('Taxist'),
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Icon(icon),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () async {
-                await ref.read(authControllerProvider.notifier).setRole('passenger');
-                if (context.mounted) context.go('/passenger');
-              },
-              child: const Text('Mijoz'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(subtitle),
+                ],
+              ),
             ),
+            const Icon(Icons.chevron_right),
           ],
         ),
       ),
