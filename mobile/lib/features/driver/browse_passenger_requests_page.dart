@@ -6,8 +6,17 @@ import 'package:taxi_mobile/core/i18n/strings.dart';
 import '../auth/auth_controller.dart';
 import 'driver_controller.dart';
 
-class BrowsePassengerRequestsPage extends ConsumerWidget {
+class BrowsePassengerRequestsPage extends ConsumerStatefulWidget {
   const BrowsePassengerRequestsPage({super.key});
+
+  @override
+  ConsumerState<BrowsePassengerRequestsPage> createState() =>
+      _BrowsePassengerRequestsPageState();
+}
+
+class _BrowsePassengerRequestsPageState
+    extends ConsumerState<BrowsePassengerRequestsPage> {
+  final Set<int> _locallyClaimed = <int>{};
 
   String _matchText(AppStrings s, String? level) {
     switch (level) {
@@ -54,8 +63,19 @@ class BrowsePassengerRequestsPage extends ConsumerWidget {
     return ok == true;
   }
 
+  Color? _cardColor(
+      BuildContext context, String claimState, bool locallyClaimed) {
+    if (claimState == 'accepted') {
+      return Colors.green.withValues(alpha: 0.22);
+    }
+    if (claimState == 'pending' || locallyClaimed) {
+      return Colors.amber.withValues(alpha: 0.26);
+    }
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final s = AppStrings.of(
         ref.watch(authControllerProvider).profile?['language']?.toString());
     final requests = ref.watch(openPassengerRequestsProvider);
@@ -97,10 +117,18 @@ class BrowsePassengerRequestsPage extends ConsumerWidget {
                   itemCount: items.length,
                   itemBuilder: (context, i) {
                     final r = items[i];
+                    final requestId = r['id'] as int;
                     final iconMeta =
                         _genderIcon(r['passenger_gender']?.toString());
                     final timeGap = r['time_gap_minutes'];
+                    final claimState = (r['claim_state']?.toString() ?? 'none');
+                    final localClaimed = _locallyClaimed.contains(requestId);
+                    final isAccepted = claimState == 'accepted';
+                    final isPending = claimState == 'pending' || localClaimed;
+                    final cardColor =
+                        _cardColor(context, claimState, localClaimed);
                     return Card(
+                      color: cardColor,
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
                         title: Row(
@@ -146,60 +174,92 @@ class BrowsePassengerRequestsPage extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        trailing: PopupMenuButton<int>(
-                          onSelected: (tripId) async {
-                            final confirmed = await _confirmClaim(context);
-                            if (!confirmed) return;
-                            try {
-                              await ref
-                                  .read(driverActionsProvider)
-                                  .claimRequest(r['id'] as int, tripId);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(s.t('claim_sent'))),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(apiErrorMessage(e,
-                                          fallback: s.t('claim_error')))),
-                                );
-                              }
-                            }
-                          },
-                          itemBuilder: (_) {
-                            return tripItems
-                                .map(
-                                  (t) => PopupMenuItem<int>(
-                                    value: t['id'] as int,
-                                    child: Text(
-                                        '${t['from_location']} -> ${t['to_location']}\n#${t['id']}'),
+                        trailing: isAccepted
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(s.t('claim_accepted_short')),
+                              )
+                            : isPending
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withValues(alpha: 0.26),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(s.t('claim_pending_short')),
+                                  )
+                                : PopupMenuButton<int>(
+                                    onSelected: (tripId) async {
+                                      final confirmed =
+                                          await _confirmClaim(context);
+                                      if (!confirmed) return;
+                                      try {
+                                        await ref
+                                            .read(driverActionsProvider)
+                                            .claimRequest(requestId, tripId);
+                                        if (mounted) {
+                                          setState(() {
+                                            _locallyClaimed.add(requestId);
+                                          });
+                                        }
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content:
+                                                    Text(s.t('claim_sent'))),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text(apiErrorMessage(e,
+                                                    fallback: s
+                                                        .t('claim_error')))),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    itemBuilder: (_) {
+                                      return tripItems
+                                          .map(
+                                            (t) => PopupMenuItem<int>(
+                                              value: t['id'] as int,
+                                              child: Text(
+                                                  '${t['from_location']} -> ${t['to_location']}\n#${t['id']}'),
+                                            ),
+                                          )
+                                          .toList();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer
+                                            .withValues(alpha: 0.55),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.send_outlined,
+                                              size: 18),
+                                          const SizedBox(width: 6),
+                                          Text(s.t('claim_send')),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                )
-                                .toList();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.send_outlined, size: 18),
-                                const SizedBox(width: 6),
-                                Text(s.t('claim_send')),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     );
                   },

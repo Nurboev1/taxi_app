@@ -5,6 +5,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val hasGoogleServicesJson = listOf(
+    "google-services.json",
+    "src/debug/google-services.json",
+    "src/release/google-services.json",
+).any { file(it).exists() }
+
+if (hasGoogleServicesJson) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.taxi_mobile"
     compileSdk = flutter.compileSdkVersion

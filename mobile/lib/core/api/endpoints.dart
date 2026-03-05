@@ -39,4 +39,5 @@ class Endpoints {
   static const myNotifications = '/notifications/my';
   static String markNotificationRead(int id) => '/notifications/$id/read';
   static const readAllNotifications = '/notifications/read-all';
+  static const pushToken = '/notifications/push-token';
 }

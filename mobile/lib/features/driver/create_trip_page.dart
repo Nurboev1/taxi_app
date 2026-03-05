@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
@@ -89,12 +90,18 @@ class _CreateTripPageState extends ConsumerState<CreateTripPage> {
           ),
           const SizedBox(height: 8),
           TextField(
-              controller: _priceCtrl,
-              decoration: InputDecoration(labelText: s.t('seat_price'))),
+            controller: _priceCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(labelText: s.t('seat_price')),
+          ),
           const SizedBox(height: 8),
           TextField(
-              controller: _seatsCtrl,
-              decoration: InputDecoration(labelText: s.t('seat_count'))),
+            controller: _seatsCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(labelText: s.t('seat_count')),
+          ),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () => _pickDate(true),

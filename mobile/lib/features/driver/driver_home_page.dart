@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:taxi_mobile/core/api/api_client.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/core/widgets/animated_blobs_background.dart';
+import 'package:taxi_mobile/core/widgets/first_time_tutorial_dialog.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
 import 'package:taxi_mobile/features/driver/driver_blocked_page.dart';
@@ -20,6 +22,60 @@ class DriverHomePage extends ConsumerStatefulWidget {
 
 class _DriverHomePageState extends ConsumerState<DriverHomePage> {
   int _tab = 0;
+  bool _tutorialChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_maybeShowTutorial);
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    if (_tutorialChecked) return;
+    _tutorialChecked = true;
+    final auth = ref.read(authControllerProvider);
+    if (auth.profile?['driver_blocked'] == true) return;
+
+    final store = ref.read(secureStoreProvider);
+    final seen = await store.readDriverTutorialSeen();
+    if (seen || !mounted) return;
+
+    final s = AppStrings.of(auth.profile?['language']?.toString());
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => FirstTimeTutorialDialog(
+        title: s.t('tutorial_title'),
+        skipText: s.t('tutorial_skip'),
+        nextText: s.t('tutorial_next'),
+        doneText: s.t('tutorial_done'),
+        steps: [
+          TutorialStepData(
+            icon: Icons.dashboard_outlined,
+            title: s.t('nav_home'),
+            description: s.t('tutorial_driver_home_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.route_outlined,
+            title: s.t('nav_trips'),
+            description: s.t('tutorial_driver_trips_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.chat_bubble_outline,
+            title: s.t('nav_chat'),
+            description: s.t('tutorial_driver_chat_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.person_outline,
+            title: s.t('nav_profile'),
+            description: s.t('tutorial_profile_desc'),
+          ),
+        ],
+      ),
+    );
+
+    await store.saveDriverTutorialSeen(true);
+  }
 
   @override
   Widget build(BuildContext context) {

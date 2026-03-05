@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.enums import AppLanguage
 from app.models.notification import UserNotification
 from app.models.user import User
+from app.services.push import send_fcm_push
 
 
 def _msg(lang: AppLanguage, uz: str, ru: str, en: str) -> str:
@@ -32,4 +33,11 @@ def create_notification(
 
     n = UserNotification(user_id=user.id, kind=kind, title=title, body=body)
     db.add(n)
+    if user.fcm_token:
+        send_fcm_push(
+            token=user.fcm_token,
+            title=title,
+            body=body,
+            data={"kind": kind},
+        )
     return n

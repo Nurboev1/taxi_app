@@ -74,6 +74,7 @@ class AppStrings {
       'price': 'Narx',
       'occupancy': 'Bandlik',
       'choose': 'Tanlash',
+      'choose_confirm_body': 'Ushbu haydovchini tanlashni tasdiqlaysizmi?',
       'choose_success': 'Haydovchi tanlandi',
       'choose_error': 'Tanlashda xatolik',
       'claims_load_error': 'Claimlarni yuklashda xatolik',
@@ -100,6 +101,8 @@ class AppStrings {
       'claim_send': 'Claim berish',
       'claim_sent': 'Claim yuborildi',
       'claim_error': 'Claim xatolik',
+      'claim_pending_short': 'Yuborilgan',
+      'claim_accepted_short': 'Qabul qilindi',
       'trips_load_error': 'Safarlarni yuklashda xatolik',
       'requests_load_error': 'So\'rovlarni yuklashda xatolik',
       'trip_passengers': 'Safar yo\'lovchilari',
@@ -171,6 +174,24 @@ class AppStrings {
       'driver_blocked_message':
           'Haydovchi rejimidan foydalanish vaqtincha to\'xtatildi. Hisobni ochish uchun bog\'laning yoki yo\'lovchi rejimiga o\'ting.',
       'contact_support': 'Bog\'lanish',
+      'tutorial_title': 'Qisqa qo\'llanma',
+      'tutorial_skip': 'O\'tkazib yuborish',
+      'tutorial_next': 'Keyingi',
+      'tutorial_done': 'Tushunarli',
+      'tutorial_passenger_home_desc':
+          'Asosiy bo\'limda so\'rov yaratish va holatini kuzatish tugmalari joylashgan.',
+      'tutorial_passenger_trips_desc':
+          'Safarlar bo\'limida baholash va oldingi baholaringizni ko\'rasiz.',
+      'tutorial_passenger_chat_desc':
+          'Chat bo\'limida haydovchilar bilan yozishmalarni ko\'rasiz.',
+      'tutorial_driver_home_desc':
+          'Asosiy bo\'limda safar e\'loni yaratish va mos so\'rovlarni ko\'rish mumkin.',
+      'tutorial_driver_trips_desc':
+          'Safarlar bo\'limida faol safarlar va olgan baholaringiz turadi.',
+      'tutorial_driver_chat_desc':
+          'Chat bo\'limida yo\'lovchilar bilan muloqot qilasiz.',
+      'tutorial_profile_desc':
+          'Profil bo\'limida shaxsiy ma\'lumotlar, sozlamalar va tema boshqaruvi mavjud.',
     },
     'ru': {
       'settings': 'Настройки',
@@ -233,6 +254,7 @@ class AppStrings {
       'price': 'Цена',
       'occupancy': 'Занято',
       'choose': 'Выбрать',
+      'choose_confirm_body': 'Подтверждаете выбор этого водителя?',
       'choose_success': 'Водитель выбран',
       'choose_error': 'Ошибка выбора',
       'claims_load_error': 'Ошибка загрузки откликов',
@@ -259,6 +281,8 @@ class AppStrings {
       'claim_send': 'Отправить отклик',
       'claim_sent': 'Отклик отправлен',
       'claim_error': 'Ошибка отклика',
+      'claim_pending_short': 'Отправлен',
+      'claim_accepted_short': 'Принят',
       'trips_load_error': 'Ошибка загрузки поездок',
       'requests_load_error': 'Ошибка загрузки заявок',
       'trip_passengers': 'Пассажиры поездки',
@@ -330,6 +354,23 @@ class AppStrings {
       'driver_blocked_message':
           'Доступ к режиму водителя временно закрыт. Для разблокировки свяжитесь с поддержкой или перейдите в режим пассажира.',
       'contact_support': 'Связаться',
+      'tutorial_title': 'Краткий гид',
+      'tutorial_skip': 'Пропустить',
+      'tutorial_next': 'Далее',
+      'tutorial_done': 'Понятно',
+      'tutorial_passenger_home_desc':
+          'В разделе Главная доступны создание заявки и просмотр её статуса.',
+      'tutorial_passenger_trips_desc':
+          'В разделе Поездки вы можете ставить оценки и видеть свои прошлые отзывы.',
+      'tutorial_passenger_chat_desc':
+          'В разделе Чат отображаются переписки с водителями.',
+      'tutorial_driver_home_desc':
+          'В разделе Главная можно создать поездку и открыть подходящие заявки.',
+      'tutorial_driver_trips_desc':
+          'В разделе Поездки находятся активные поездки и полученные оценки.',
+      'tutorial_driver_chat_desc': 'В разделе Чат вы общаетесь с пассажирами.',
+      'tutorial_profile_desc':
+          'В разделе Профиль доступны личные данные, настройки и тема приложения.',
     },
     'en': {
       'settings': 'Settings',
@@ -392,6 +433,7 @@ class AppStrings {
       'price': 'Price',
       'occupancy': 'Occupancy',
       'choose': 'Choose',
+      'choose_confirm_body': 'Do you confirm selecting this driver?',
       'choose_success': 'Driver selected',
       'choose_error': 'Selection failed',
       'claims_load_error': 'Failed to load claims',
@@ -418,6 +460,8 @@ class AppStrings {
       'claim_send': 'Claim',
       'claim_sent': 'Claim sent',
       'claim_error': 'Claim failed',
+      'claim_pending_short': 'Sent',
+      'claim_accepted_short': 'Accepted',
       'trips_load_error': 'Failed to load trips',
       'requests_load_error': 'Failed to load requests',
       'trip_passengers': 'Trip passengers',
@@ -487,6 +531,24 @@ class AppStrings {
       'driver_blocked_message':
           'Driver mode is temporarily unavailable. Contact support to restore access or switch to passenger mode.',
       'contact_support': 'Contact support',
+      'tutorial_title': 'Quick tutorial',
+      'tutorial_skip': 'Skip',
+      'tutorial_next': 'Next',
+      'tutorial_done': 'Done',
+      'tutorial_passenger_home_desc':
+          'Use Home to create a request and track its status.',
+      'tutorial_passenger_trips_desc':
+          'Trips contains rating actions and your previous ratings.',
+      'tutorial_passenger_chat_desc':
+          'Chat shows your conversations with drivers.',
+      'tutorial_driver_home_desc':
+          'Use Home to create a trip and browse matching requests.',
+      'tutorial_driver_trips_desc':
+          'Trips contains active rides and received ratings.',
+      'tutorial_driver_chat_desc':
+          'Chat is where you communicate with passengers.',
+      'tutorial_profile_desc':
+          'Profile includes personal data, settings, and theme controls.',
     },
   };
 

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
+import 'package:taxi_mobile/core/api/api_client.dart';
 import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/core/widgets/animated_blobs_background.dart';
+import 'package:taxi_mobile/core/widgets/first_time_tutorial_dialog.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
 import 'package:taxi_mobile/features/notifications/notifications_controller.dart';
@@ -20,12 +22,63 @@ class PassengerHomePage extends ConsumerStatefulWidget {
 
 class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
   int _tab = 0;
+  bool _tutorialChecked = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-        () => ref.read(passengerActionsProvider).restoreLastRequestId());
+    Future.microtask(() async {
+      await ref.read(passengerActionsProvider).restoreLastRequestId();
+      if (mounted) _maybeShowTutorial();
+    });
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    if (_tutorialChecked) return;
+    _tutorialChecked = true;
+
+    final store = ref.read(secureStoreProvider);
+    final seen = await store.readPassengerTutorialSeen();
+    if (seen || !mounted) return;
+
+    final lang =
+        ref.read(authControllerProvider).profile?['language']?.toString();
+    final s = AppStrings.of(lang);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => FirstTimeTutorialDialog(
+        title: s.t('tutorial_title'),
+        skipText: s.t('tutorial_skip'),
+        nextText: s.t('tutorial_next'),
+        doneText: s.t('tutorial_done'),
+        steps: [
+          TutorialStepData(
+            icon: Icons.dashboard_outlined,
+            title: s.t('nav_home'),
+            description: s.t('tutorial_passenger_home_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.route_outlined,
+            title: s.t('nav_trips'),
+            description: s.t('tutorial_passenger_trips_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.chat_bubble_outline,
+            title: s.t('nav_chat'),
+            description: s.t('tutorial_passenger_chat_desc'),
+          ),
+          TutorialStepData(
+            icon: Icons.person_outline,
+            title: s.t('nav_profile'),
+            description: s.t('tutorial_profile_desc'),
+          ),
+        ],
+      ),
+    );
+
+    await store.savePassengerTutorialSeen(true);
   }
 
   @override

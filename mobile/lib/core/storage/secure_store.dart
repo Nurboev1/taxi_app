@@ -8,6 +8,8 @@ class SecureStore {
   static const _chatIdKey = 'current_chat_id';
   static const _darkModeKey = 'dark_mode';
   static const _shownNotificationIdsKey = 'shown_notification_ids';
+  static const _passengerTutorialSeenKey = 'tutorial_seen_passenger_home';
+  static const _driverTutorialSeenKey = 'tutorial_seen_driver_home';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
@@ -69,6 +71,22 @@ class SecureStore {
     await _storage.write(
         key: _shownNotificationIdsKey, value: capped.join(','));
   }
+
+  Future<bool> readPassengerTutorialSeen() async {
+    final v = await _storage.read(key: _passengerTutorialSeenKey);
+    return v == '1';
+  }
+
+  Future<void> savePassengerTutorialSeen(bool seen) =>
+      _storage.write(key: _passengerTutorialSeenKey, value: seen ? '1' : '0');
+
+  Future<bool> readDriverTutorialSeen() async {
+    final v = await _storage.read(key: _driverTutorialSeenKey);
+    return v == '1';
+  }
+
+  Future<void> saveDriverTutorialSeen(bool seen) =>
+      _storage.write(key: _driverTutorialSeenKey, value: seen ? '1' : '0');
 
   Future<void> clearAll() => _storage.deleteAll();
 }

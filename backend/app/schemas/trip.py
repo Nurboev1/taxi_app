@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import TripStatus
 
@@ -13,6 +13,14 @@ class DriverTripCreateIn(BaseModel):
     end_time: datetime
     seats_total: int = Field(default=4, ge=1, le=8)
     price_per_seat: Decimal = Field(gt=0)
+
+    @field_validator("price_per_seat")
+    @classmethod
+    def validate_integer_price(cls, v: Decimal) -> Decimal:
+        # Only whole-number prices are allowed (digits only).
+        if v != v.to_integral_value():
+            raise ValueError("price_per_seat faqat butun raqam bo'lishi kerak")
+        return v
 
 
 class DriverTripOut(BaseModel):

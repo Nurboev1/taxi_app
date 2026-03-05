@@ -25,5 +25,6 @@ class User(Base):
     driver_access_override: Mapped[bool] = mapped_column(Boolean, default=False)
     driver_block_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     driver_unblocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    fcm_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.none)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

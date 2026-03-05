@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
+import os
 from pathlib import Path
+import time
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -44,6 +46,142 @@ def _verify_admin_token(token: str | None) -> bool:
 
 def _admin_required(request: Request) -> bool:
     return _verify_admin_token(request.cookies.get(ADMIN_COOKIE))
+
+
+def _collect_resource_metrics() -> dict[str, object]:
+    try:
+        import psutil  # type: ignore
+    except Exception:
+        return {
+            "available": False,
+            "error": "psutil topilmadi. `pip install psutil` qiling.",
+        }
+
+    def _read_text(path: str) -> str | None:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception:
+            return None
+
+    def _is_running_in_container() -> bool:
+        if os.path.exists("/.dockerenv"):
+            return True
+        cgroup = _read_text("/proc/1/cgroup") or ""
+        return "docker" in cgroup or "kubepods" in cgroup or "containerd" in cgroup
+
+    def _cgroup_v2_memory() -> tuple[int | None, int | None]:
+        used_raw = _read_text("/sys/fs/cgroup/memory.current")
+        limit_raw = _read_text("/sys/fs/cgroup/memory.max")
+        if used_raw is None or limit_raw is None:
+            return None, None
+        try:
+            used = int(used_raw)
+            limit = None if limit_raw == "max" else int(limit_raw)
+            return used, limit
+        except ValueError:
+            return None, None
+
+    def _cgroup_v1_memory() -> tuple[int | None, int | None]:
+        used_raw = _read_text("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+        limit_raw = _read_text("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+        if used_raw is None or limit_raw is None:
+            return None, None
+        try:
+            used = int(used_raw)
+            limit = int(limit_raw)
+            # Huge value means "unlimited"
+            if limit >= 9_000_000_000_000_000_000:
+                limit = None
+            return used, limit
+        except ValueError:
+            return None, None
+
+    def _cgroup_cpu_percent() -> tuple[float | None, float | None]:
+        # Returns (cpu_percent, cpu_limit_cores)
+        cpu_max = _read_text("/sys/fs/cgroup/cpu.max")
+        cpu_stat_before = _read_text("/sys/fs/cgroup/cpu.stat")
+        if cpu_max is None or cpu_stat_before is None:
+            return None, None
+
+        try:
+            quota_str, period_str = cpu_max.split()
+            cpu_limit_cores = None if quota_str == "max" else (int(quota_str) / int(period_str))
+        except Exception:
+            cpu_limit_cores = None
+
+        def _usage_usec(cpu_stat_text: str) -> int | None:
+            for line in cpu_stat_text.splitlines():
+                if line.startswith("usage_usec "):
+                    try:
+                        return int(line.split()[1])
+                    except Exception:
+                        return None
+            return None
+
+        u1 = _usage_usec(cpu_stat_before)
+        if u1 is None:
+            return None, cpu_limit_cores
+
+        t1 = time.time()
+        time.sleep(0.2)
+        cpu_stat_after = _read_text("/sys/fs/cgroup/cpu.stat")
+        if cpu_stat_after is None:
+            return None, cpu_limit_cores
+        u2 = _usage_usec(cpu_stat_after)
+        if u2 is None:
+            return None, cpu_limit_cores
+        t2 = time.time()
+
+        delta_usage_sec = (u2 - u1) / 1_000_000
+        delta_wall_sec = max(0.001, t2 - t1)
+
+        base_cores = cpu_limit_cores if cpu_limit_cores and cpu_limit_cores > 0 else float(psutil.cpu_count(logical=True) or 1)
+        percent = (delta_usage_sec / (delta_wall_sec * base_cores)) * 100.0
+        return max(0.0, min(100.0, percent)), cpu_limit_cores
+
+    in_container = _is_running_in_container()
+    scope = "container" if in_container else "host"
+
+    vm = psutil.virtual_memory()
+    disk = psutil.disk_usage("/")
+    cpu_percent_host = psutil.cpu_percent(interval=0.2)
+
+    memory_used = vm.used
+    memory_total = vm.total
+    memory_percent = vm.percent
+    cpu_percent = cpu_percent_host
+    cpu_limit_cores = None
+
+    if in_container:
+        used, limit = _cgroup_v2_memory()
+        if used is None:
+            used, limit = _cgroup_v1_memory()
+        if used is not None:
+            memory_used = used
+        if limit is not None and limit > 0:
+            memory_total = limit
+            memory_percent = (memory_used / memory_total) * 100.0
+
+        cpu_pct_cgroup, cpu_limit = _cgroup_cpu_percent()
+        if cpu_pct_cgroup is not None:
+            cpu_percent = cpu_pct_cgroup
+        cpu_limit_cores = cpu_limit
+
+    return {
+        "available": True,
+        "scope": scope,
+        "cpu_percent": round(cpu_percent, 1),
+        "cpu_cores_logical": psutil.cpu_count(logical=True) or 0,
+        "cpu_cores_physical": psutil.cpu_count(logical=False) or 0,
+        "cpu_limit_cores": round(cpu_limit_cores, 2) if cpu_limit_cores is not None else None,
+        "memory_used_gb": round(memory_used / (1024**3), 2),
+        "memory_total_gb": round(memory_total / (1024**3), 2),
+        "memory_percent": round(memory_percent, 1),
+        "disk_used_gb": round(disk.used / (1024**3), 2),
+        "disk_total_gb": round(disk.total / (1024**3), 2),
+        "disk_percent": round(disk.percent, 1),
+    }
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -113,6 +251,7 @@ def admin_dashboard(request: Request):
         lookup_error: str | None = None
         driver_access_user: User | None = None
         driver_access_error: str | None = None
+        resource_metrics = _collect_resource_metrics()
 
         users_total = db.scalar(select(func.count(User.id))) or 0
         drivers_total = db.scalar(select(func.count(User.id)).where(User.role == UserRole.driver)) or 0
@@ -235,6 +374,7 @@ def admin_dashboard(request: Request):
             "driver_access_user": driver_access_user,
             "driver_access_error": driver_access_error,
             "driver_access_status": driver_access_status or "",
+            "resource_metrics": resource_metrics,
         },
     )
 

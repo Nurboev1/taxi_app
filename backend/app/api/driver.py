@@ -1,5 +1,5 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_role
@@ -270,7 +270,36 @@ def browse_open_requests(
     db: Session = Depends(get_db),
 ):
     trips = db.scalars(select(DriverTrip).where(DriverTrip.driver_id == current_user.id)).all()
-    reqs = db.scalars(select(PassengerRequest).where(PassengerRequest.status == RequestStatus.open)).all()
+    reqs = db.scalars(
+        select(PassengerRequest).where(
+            or_(
+                PassengerRequest.status == RequestStatus.open,
+                (
+                    (PassengerRequest.status == RequestStatus.chosen)
+                    & (PassengerRequest.chosen_driver_id == current_user.id)
+                ),
+            )
+        )
+    ).all()
+    req_ids = [r.id for r in reqs]
+    claim_state_map: dict[int, str] = {}
+    if req_ids:
+        own_claims = db.scalars(
+            select(RequestClaim).where(
+                RequestClaim.driver_id == current_user.id,
+                RequestClaim.request_id.in_(req_ids),
+            )
+        ).all()
+        for claim in own_claims:
+            if claim.status == ClaimStatus.accepted:
+                claim_state_map[claim.request_id] = "accepted"
+            elif claim.status == ClaimStatus.pending:
+                claim_state_map[claim.request_id] = "pending"
+            elif claim.status == ClaimStatus.rejected:
+                claim_state_map[claim.request_id] = "rejected"
+    for req in reqs:
+        if req.status == RequestStatus.chosen and req.chosen_driver_id == current_user.id:
+            claim_state_map[req.id] = "accepted"
     passenger_ids = {r.passenger_id for r in reqs}
     passengers = db.scalars(select(User).where(User.id.in_(passenger_ids))).all() if passenger_ids else []
     passenger_gender_map = {u.id: (u.gender.value if u.gender else None) for u in passengers}
@@ -294,6 +323,7 @@ def browse_open_requests(
                 chosen_driver_id=req.chosen_driver_id,
                 match_level="low",
                 time_gap_minutes=1440,
+                claim_state=claim_state_map.get(req.id, "none"),
             )
             for req in reqs
         ]
@@ -339,6 +369,7 @@ def browse_open_requests(
                     chosen_driver_id=req.chosen_driver_id,
                     match_level=best_level,
                     time_gap_minutes=best_gap,
+                    claim_state=claim_state_map.get(req.id, "none"),
                 ),
                 _match_order(best_level),
                 _driver_specific_order_key(current_user.id, req.id),
@@ -366,6 +397,7 @@ def browse_open_requests(
             chosen_driver_id=req.chosen_driver_id,
             match_level="low",
             time_gap_minutes=1440,
+            claim_state=claim_state_map.get(req.id, "none"),
         )
         for req in reqs
     ]

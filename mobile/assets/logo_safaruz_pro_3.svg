@@ -1,0 +1,24 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg3" x1="120" y1="120" x2="904" y2="904" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="road" x1="300" y1="250" x2="720" y2="770" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="56" y="56" width="912" height="912" rx="220" fill="url(#bg3)"/>
+
+  <circle cx="512" cy="512" r="292" fill="#0B1220" stroke="#334155" stroke-width="4"/>
+
+  <path d="M652 324C622 292 579 272 530 272C434 272 356 350 356 446C356 537 429 612 520 612C579 612 628 660 628 720C628 781 579 830 518 830C472 830 433 812 406 783" stroke="url(#road)" stroke-width="66" stroke-linecap="round"/>
+  <path d="M511 306V354" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round"/>
+  <path d="M511 444V492" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round"/>
+  <path d="M511 582V630" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round"/>
+  <path d="M511 720V768" stroke="#E2E8F0" stroke-width="10" stroke-linecap="round"/>
+
+  <text x="512" y="920" text-anchor="middle" fill="#F8FAFC" font-family="Poppins, Montserrat, Arial, sans-serif" font-size="70" font-weight="600" letter-spacing="2">SafarUz</text>
+</svg>

@@ -6,11 +6,6 @@ import '../api/api_client.dart';
 import '../api/endpoints.dart';
 import 'local_notifications_service.dart';
 
-final localNotificationsServiceProvider =
-    Provider<LocalNotificationsService>((ref) {
-  return LocalNotificationsService();
-});
-
 class NotificationPoller {
   NotificationPoller(this.ref);
 

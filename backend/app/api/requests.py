@@ -21,6 +21,7 @@ from app.schemas.request import (
     PassengerRequestCreateIn,
     PassengerRequestOut,
 )
+from app.services.notifications import create_notification
 
 router = APIRouter(tags=["requests"])
 
@@ -356,6 +357,20 @@ def choose_driver(
         req.chosen_claim_id = chosen_claim.id
         req.chosen_driver_id = chosen_claim.driver_id
         db.add(req)
+
+        chosen_driver = db.scalar(select(User).where(User.id == chosen_claim.driver_id))
+        if chosen_driver:
+            create_notification(
+                db,
+                user=chosen_driver,
+                kind="claim_accepted",
+                uz_title="Claimingiz qabul qilindi",
+                ru_title="Ваш отклик принят",
+                en_title="Your claim was accepted",
+                uz_body="Yo'lovchi sizning claimingizni tanladi.",
+                ru_body="Пассажир выбрал ваш отклик.",
+                en_body="A passenger selected your claim.",
+            )
 
         chat = db.scalar(
             select(Chat).where(

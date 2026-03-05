@@ -14,7 +14,7 @@ class OtpPage extends ConsumerStatefulWidget {
 }
 
 class _OtpPageState extends ConsumerState<OtpPage> {
-  final _otpCtrl = TextEditingController(text: '0000');
+  final _otpCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +30,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.t('otp_test')),
-                const SizedBox(height: 12),
                 TextField(
                   controller: _otpCtrl,
                   keyboardType: TextInputType.number,

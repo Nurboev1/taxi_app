@@ -18,11 +18,20 @@ dependencies:
   url_launcher: ^6.3.1
   google_fonts: ^6.2.1
   flutter_local_notifications: ^17.2.2
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.1.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon_source.png"
+  remove_alpha_ios: true

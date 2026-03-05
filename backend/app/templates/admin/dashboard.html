@@ -54,6 +54,11 @@
     .modal-head button { background: #ef4444; border-color: #ef4444; }
     .modal-body { padding: 12px; max-height: 60vh; overflow: auto; }
     .error { color: #b91c1c; font-weight: 600; margin-bottom: 10px; }
+    .meter { margin: 12px 0; }
+    .meter-top { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #334155; }
+    .bar { height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #0ea5e9, #0f766e); }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -67,6 +72,7 @@
       <a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>
       <a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>
       <a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>
+      <a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>
     </div>
 
     <div class="stats">
@@ -274,6 +280,48 @@
                 <button type="submit">Blokni ochish</button>
               </form>
             </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'resources' %}
+      <section class="card">
+        <h3>Server resurslari</h3>
+        <div class="body">
+          {% if resource_metrics.available %}
+            <div class="meta"><strong>Scope:</strong> {{ resource_metrics.scope }}</div>
+            <div class="meter">
+              <div class="meter-top">
+                <strong>CPU</strong>
+                <span>{{ resource_metrics.cpu_percent }}%</span>
+              </div>
+              <div class="bar"><span style="width: {{ resource_metrics.cpu_percent }}%"></span></div>
+              <div class="meta">
+                Logical core: {{ resource_metrics.cpu_cores_logical }}, Physical core: {{ resource_metrics.cpu_cores_physical }}
+                {% if resource_metrics.cpu_limit_cores is not none %}
+                  , Container limit: {{ resource_metrics.cpu_limit_cores }} core
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="meter">
+              <div class="meter-top">
+                <strong>RAM</strong>
+                <span>{{ resource_metrics.memory_percent }}% ({{ resource_metrics.memory_used_gb }} / {{ resource_metrics.memory_total_gb }} GB)</span>
+              </div>
+              <div class="bar"><span style="width: {{ resource_metrics.memory_percent }}%"></span></div>
+            </div>
+
+            <div class="meter">
+              <div class="meter-top">
+                <strong>Disk</strong>
+                <span>{{ resource_metrics.disk_percent }}% ({{ resource_metrics.disk_used_gb }} / {{ resource_metrics.disk_total_gb }} GB)</span>
+              </div>
+              <div class="bar"><span style="width: {{ resource_metrics.disk_percent }}%"></span></div>
+            </div>
+          {% else %}
+            <div class="error">{{ resource_metrics.error }}</div>
           {% endif %}
         </div>
       </section>

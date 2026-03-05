@@ -28,6 +28,7 @@ class PassengerRequestOut(BaseModel):
     chosen_driver_id: int | None = None
     match_level: str | None = None
     time_gap_minutes: int | None = None
+    claim_state: str | None = None
 
     class Config:
         from_attributes = True

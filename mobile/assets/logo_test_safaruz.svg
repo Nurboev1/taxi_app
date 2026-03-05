@@ -1,0 +1,35 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="96" x2="928" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="260" y1="290" x2="760" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D1FAE5"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="48" y="48" width="928" height="928" rx="220" fill="url(#bg)"/>
+
+  <path
+    d="M316 354C316 323.072 341.072 298 372 298H652C682.928 298 708 323.072 708 354V390C708 400.365 699.365 409 689 409H335C324.635 409 316 400.365 316 390V354Z"
+    fill="url(#mark)"/>
+  <path
+    d="M308 469C308 438.072 333.072 413 364 413H660C690.928 413 716 438.072 716 469V660C716 690.928 690.928 716 660 716H364C333.072 716 308 690.928 308 660V469Z"
+    fill="white" fill-opacity="0.15"/>
+
+  <path
+    d="M364 505C364 486.222 379.222 471 398 471H626C644.778 471 660 486.222 660 505V561C660 579.778 644.778 595 626 595H398C379.222 595 364 579.778 364 561V505Z"
+    fill="url(#mark)"/>
+
+  <circle cx="426" cy="533" r="18" fill="#0F766E"/>
+  <circle cx="598" cy="533" r="18" fill="#0F766E"/>
+
+  <path d="M468 533H556" stroke="#0F766E" stroke-width="12" stroke-linecap="round"/>
+
+  <text x="512" y="790" text-anchor="middle" fill="white"
+        font-family="Montserrat, Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="2">
+    SafarUz
+  </text>
+</svg>

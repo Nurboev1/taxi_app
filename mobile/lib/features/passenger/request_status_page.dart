@@ -22,6 +22,28 @@ class RequestStatusPage extends ConsumerWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  Future<bool> _confirmChoose(BuildContext context, AppStrings s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.t('confirm')),
+        content: Text(s.t('choose_confirm_body')),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Yo'q"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Ha"),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang =
@@ -125,6 +147,9 @@ class RequestStatusPage extends ConsumerWidget {
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () async {
+                                  final confirmed =
+                                      await _confirmChoose(context, s);
+                                  if (!confirmed) return;
                                   try {
                                     final result = await ref
                                         .read(passengerActionsProvider)

@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: taxi_postgres
+    mem_limit: 1g
+    cpus: 1.0
     environment:
       POSTGRES_USER: taxi
       POSTGRES_PASSWORD: taxi
