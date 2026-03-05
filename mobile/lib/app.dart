@@ -38,7 +38,14 @@ class TaxiApp extends ConsumerWidget {
       routes: [
         GoRoute(path: '/splash', builder: (_, __) => const _SplashPage()),
         GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
-        GoRoute(path: '/otp', builder: (_, __) => const OtpPage()),
+        GoRoute(
+          path: '/otp',
+          builder: (_, state) {
+            final reason =
+                state.uri.queryParameters['reason'] ?? 'register';
+            return OtpPage(reason: reason);
+          },
+        ),
         GoRoute(path: '/role', builder: (_, __) => const RolePage()),
         GoRoute(
             path: '/profile-setup',
@@ -134,6 +141,21 @@ class TaxiApp extends ConsumerWidget {
   }
 }
 
+class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
+  }
+}
+
 ThemeData _buildLightTheme() {
   final scheme = ColorScheme.fromSeed(
     seedColor: const Color(0xFF0B7A75),
@@ -150,8 +172,8 @@ ThemeData _buildLightTheme() {
     textTheme: text,
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.android: _NoTransitionsBuilder(),
+        TargetPlatform.iOS: _NoTransitionsBuilder(),
       },
     ),
     appBarTheme: AppBarTheme(
@@ -241,8 +263,8 @@ ThemeData _buildDarkTheme() {
     textTheme: text,
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.android: _NoTransitionsBuilder(),
+        TargetPlatform.iOS: _NoTransitionsBuilder(),
       },
     ),
     appBarTheme: AppBarTheme(

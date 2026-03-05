@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "196995816555",
+    "project_id": "safaruz-5fa75",
+    "storage_bucket": "safaruz-5fa75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:196995816555:android:deb48234f1926b6d00a52e",
+        "android_client_info": {
+          "package_name": "com.example.taxi_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCD1F-zLEEbfQwgxksx5xBmm_-tGk6hL6M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

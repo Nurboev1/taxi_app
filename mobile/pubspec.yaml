@@ -29,6 +29,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/day_wave_bg.png
 
 flutter_launcher_icons:
   android: true

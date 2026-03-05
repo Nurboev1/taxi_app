@@ -1,7 +1,13 @@
 class Endpoints {
-  static const baseUrl = 'http://192.168.100.8:8000';
+  static const baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://170.168.6.115:8000',
+  );
 
   static const requestOtp = '/auth/request-otp';
+  static const phoneStatus = '/auth/phone-status';
+  static const completeOtp = '/auth/complete-otp';
+  static const loginPassword = '/auth/login-password';
   static const verifyOtp = '/auth/verify-otp';
   static const setRole = '/role/set';
   static const myProfile = '/auth/profile/me';
@@ -33,8 +39,15 @@ class Endpoints {
   static const myChats = '/chats/my';
   static String sendMessage(int id) => '/chats/$id/messages';
   static String deleteChat(int id) => '/chats/$id';
+  static String get _wsBaseUrl {
+    final uri = Uri.parse(baseUrl);
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    return '$wsScheme://${uri.host}$port';
+  }
+
   static String wsChat(int id, String token) =>
-      'ws://192.168.100.8:8000/ws/chats/$id?token=$token';
+      '$_wsBaseUrl/ws/chats/$id?token=$token';
 
   static const myNotifications = '/notifications/my';
   static String markNotificationRead(int id) => '/notifications/$id/read';

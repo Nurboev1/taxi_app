@@ -11,6 +11,7 @@ class AuthState {
     this.role,
     this.phone,
     this.profile,
+    this.hasPassword,
     this.loading = false,
     this.error,
   });
@@ -20,6 +21,7 @@ class AuthState {
   final String? role;
   final String? phone;
   final Map<String, dynamic>? profile;
+  final bool? hasPassword;
   final bool loading;
   final String? error;
 
@@ -31,6 +33,7 @@ class AuthState {
     String? role,
     String? phone,
     Map<String, dynamic>? profile,
+    bool? hasPassword,
     bool? loading,
     String? error,
   }) {
@@ -40,6 +43,7 @@ class AuthState {
       role: role ?? this.role,
       phone: phone ?? this.phone,
       profile: profile ?? this.profile,
+      hasPassword: hasPassword ?? this.hasPassword,
       loading: loading ?? this.loading,
       error: error,
     );
@@ -72,12 +76,42 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> requestOtp(String phone) async {
+  Future<bool?> checkPhoneStatus(String phone) async {
     try {
       state = state.copyWith(loading: true, error: null, phone: phone);
-      await ref
+      final res = await ref
           .read(apiClientProvider)
-          .post(Endpoints.requestOtp, data: {'phone': phone});
+          .post(Endpoints.phoneStatus, data: {'phone': phone});
+      final hasPassword = res.data['has_password'] == true;
+      state = state.copyWith(
+        loading: false,
+        phone: phone,
+        hasPassword: hasPassword,
+        error: null,
+      );
+      return hasPassword;
+    } on DioException catch (e) {
+      final detail = e.response?.data is Map<String, dynamic>
+          ? (e.response?.data['detail']?.toString() ?? '')
+          : '';
+      final msg = e.message?.trim() ?? '';
+      state = state.copyWith(
+        loading: false,
+        error: detail.isNotEmpty
+            ? detail
+            : (msg.isNotEmpty ? msg : 'Telefon tekshirishda xatolik'),
+      );
+      return null;
+    }
+  }
+
+  Future<bool> requestOtp(String phone, {String reason = 'register'}) async {
+    try {
+      state = state.copyWith(loading: true, error: null, phone: phone);
+      await ref.read(apiClientProvider).post(
+            Endpoints.requestOtp,
+            data: {'phone': phone, 'reason': reason},
+          );
       state = state.copyWith(loading: false, phone: phone, error: null);
       return true;
     } on DioException catch (e) {
@@ -97,16 +131,26 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> verifyOtp(String otp) async {
+  Future<bool> completeOtpAndSetPassword(
+    String otp,
+    String password, {
+    String reason = 'register',
+  }) async {
     if (state.phone == null) {
       state = state.copyWith(error: 'Telefon raqam topilmadi');
       return false;
     }
+
     try {
       state = state.copyWith(loading: true, error: null);
       final res = await ref.read(apiClientProvider).post(
-        Endpoints.verifyOtp,
-        data: {'phone': state.phone, 'otp': otp},
+        Endpoints.completeOtp,
+        data: {
+          'phone': state.phone,
+          'otp': otp,
+          'password': password,
+          'reason': reason,
+        },
       );
       final token = res.data['access_token'] as String;
       final role = res.data['role'] as String;
@@ -122,6 +166,7 @@ class AuthController extends StateNotifier<AuthState> {
         role: role,
         userId: userId,
         profile: profile,
+        hasPassword: true,
         error: null,
       );
       return true;
@@ -133,8 +178,48 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(
         loading: false,
         error: detail.isNotEmpty
-            ? "OTP xatolik: $detail"
-            : (msg.isNotEmpty ? "OTP xatolik: $msg" : 'OTP noto\'g\'ri'),
+            ? detail
+            : (msg.isNotEmpty ? msg : 'OTP yoki parol xato'),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> loginWithPassword(String phone, String password) async {
+    try {
+      state = state.copyWith(loading: true, error: null, phone: phone);
+      final res = await ref.read(apiClientProvider).post(
+        Endpoints.loginPassword,
+        data: {'phone': phone, 'password': password},
+      );
+      final token = res.data['access_token'] as String;
+      final role = res.data['role'] as String;
+      final userId = res.data['user']['id'] as int;
+      final profile = (res.data['user'] as Map).cast<String, dynamic>();
+      final store = ref.read(secureStoreProvider);
+      await store.saveToken(token);
+      await store.saveRole(role);
+      await store.saveUserId(userId);
+      state = state.copyWith(
+        loading: false,
+        token: token,
+        role: role,
+        userId: userId,
+        profile: profile,
+        hasPassword: true,
+        error: null,
+      );
+      return true;
+    } on DioException catch (e) {
+      final detail = e.response?.data is Map<String, dynamic>
+          ? (e.response?.data['detail']?.toString() ?? '')
+          : '';
+      final msg = e.message?.trim() ?? '';
+      state = state.copyWith(
+        loading: false,
+        error: detail.isNotEmpty
+            ? detail
+            : (msg.isNotEmpty ? msg : 'Kirishda xatolik'),
       );
       return false;
     }

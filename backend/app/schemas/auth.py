@@ -1,4 +1,5 @@
-﻿from datetime import datetime
+from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
@@ -27,13 +28,42 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class OtpReason(str, Enum):
+    register = "register"
+    reset_password = "reset_password"
+
+
+class PhoneIn(BaseModel):
+    phone: str
+
+
+class PhoneStatusOut(BaseModel):
+    phone: str
+    exists: bool
+    has_password: bool
+
+
 class RequestOtpIn(BaseModel):
     phone: str
+    reason: OtpReason = OtpReason.register
 
 
 class VerifyOtpIn(BaseModel):
     phone: str
     otp: str
+    reason: OtpReason = OtpReason.register
+
+
+class OtpPasswordCompleteIn(BaseModel):
+    phone: str
+    otp: str
+    password: str = Field(min_length=8, max_length=128)
+    reason: OtpReason = OtpReason.register
+
+
+class PasswordLoginIn(BaseModel):
+    phone: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class VerifyOtpOut(BaseModel):

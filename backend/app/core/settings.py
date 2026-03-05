@@ -11,16 +11,15 @@ class Settings(BaseSettings):
     admin_password: str = "admin123"
     admin_token_expire_minutes: int = 60 * 12
     fcm_server_key: str = ""
-    sms_provider: str = "test"
+    fcm_project_id: str = ""
+    fcm_service_account_file: str = ""
+    sms_provider: str = "devsms"
     otp_ttl_minutes: int = 5
     otp_cooldown_seconds: int = 60
-    eskiz_base_url: str = "https://notify.eskiz.uz"
-    eskiz_email: str = ""
-    eskiz_password: str = ""
-    eskiz_from: str = "4546"
-    eskiz_callback_url: str = ""
-    eskiz_timeout_seconds: int = 10
-    eskiz_test_mode: bool = False
+    devsms_base_url: str = "https://devsms.uz/api"
+    devsms_token: str = ""
+    devsms_from: str = "4546"
+    devsms_timeout_seconds: int = 10
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

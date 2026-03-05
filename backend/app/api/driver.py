@@ -270,14 +270,20 @@ def browse_open_requests(
     db: Session = Depends(get_db),
 ):
     trips = db.scalars(select(DriverTrip).where(DriverTrip.driver_id == current_user.id)).all()
+    own_claim_req_ids = db.scalars(
+        select(RequestClaim.request_id).where(
+            RequestClaim.driver_id == current_user.id,
+            RequestClaim.status.in_(
+                [ClaimStatus.pending, ClaimStatus.accepted, ClaimStatus.rejected]
+            ),
+        )
+    ).all()
+    own_claim_req_id_set = set(own_claim_req_ids)
     reqs = db.scalars(
         select(PassengerRequest).where(
             or_(
                 PassengerRequest.status == RequestStatus.open,
-                (
-                    (PassengerRequest.status == RequestStatus.chosen)
-                    & (PassengerRequest.chosen_driver_id == current_user.id)
-                ),
+                PassengerRequest.id.in_(own_claim_req_ids),
             )
         )
     ).all()
@@ -350,8 +356,12 @@ def browse_open_requests(
                 best_level = level
                 best_gap = gap
 
-        if not has_route_and_seats:
+        claim_state = claim_state_map.get(req.id, "none")
+        if not has_route_and_seats and req.id not in own_claim_req_id_set:
             continue
+        if not has_route_and_seats:
+            best_level = "low"
+            best_gap = 1440
         scored.append(
             (
                 PassengerRequestOut(
@@ -369,7 +379,7 @@ def browse_open_requests(
                     chosen_driver_id=req.chosen_driver_id,
                     match_level=best_level,
                     time_gap_minutes=best_gap,
-                    claim_state=claim_state_map.get(req.id, "none"),
+                    claim_state=claim_state,
                 ),
                 _match_order(best_level),
                 _driver_specific_order_key(current_user.id, req.id),

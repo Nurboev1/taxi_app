@@ -17,11 +17,25 @@ class AuthPage extends ConsumerStatefulWidget {
 
 class _AuthPageState extends ConsumerState<AuthPage> {
   final _phoneCtrl = TextEditingController(text: '+998');
+  final _passwordCtrl = TextEditingController();
   bool _acceptedLegal = false;
 
   Future<void> _openLegalDoc(String path) async {
     final uri = Uri.parse('${Endpoints.baseUrl}$path');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _goAfterAuth() {
+    final role = ref.read(authControllerProvider).role;
+    final profile = ref.read(authControllerProvider).profile ?? {};
+    final blocked = profile['driver_blocked'] == true;
+    if (role == 'driver') {
+      context.go(blocked ? '/driver-blocked' : '/driver');
+    } else if (role == 'passenger') {
+      context.go('/passenger');
+    } else {
+      context.go('/role');
+    }
   }
 
   @override
@@ -44,8 +58,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         .headlineMedium
                         ?.copyWith(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 6),
-                const Text(
-                    'Telefon raqamingizni kiriting, SMS kod bilan tez kiramiz.'),
+                const Text('Telefon raqamingizni kiriting va davom eting.'),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _phoneCtrl,
@@ -53,6 +66,53 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   decoration: InputDecoration(labelText: s.t('phone_number')),
                 ),
                 const SizedBox(height: 10),
+                TextField(
+                  controller: _passwordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Parol'),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: state.loading
+                        ? null
+                        : () async {
+                            if (!_acceptedLegal) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(s.t('must_accept_legal'))),
+                              );
+                              return;
+                            }
+
+                            final hasPassword = await ref
+                                .read(authControllerProvider.notifier)
+                                .checkPhoneStatus(_phoneCtrl.text.trim());
+                            if (!context.mounted) return;
+                            if (hasPassword != true) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Bu raqam uchun parol hali o\'rnatilmagan',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final ok = await ref
+                                .read(authControllerProvider.notifier)
+                                .requestOtp(
+                                  _phoneCtrl.text.trim(),
+                                  reason: 'reset_password',
+                                );
+                            if (!context.mounted || !ok) return;
+                            context.go('/otp?reason=reset_password');
+                          },
+                    child: const Text('Parolni unutdim'),
+                  ),
+                ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -85,12 +145,39 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                             );
                             return;
                           }
+
+                          final phone = _phoneCtrl.text.trim();
+                          final hasPassword = await ref
+                              .read(authControllerProvider.notifier)
+                              .checkPhoneStatus(phone);
+                          if (!context.mounted || hasPassword == null) return;
+
+                          if (hasPassword) {
+                            if (_passwordCtrl.text.trim().length < 8) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Parol kamida 8 ta belgidan iborat bo\'lishi kerak',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            final ok = await ref
+                                .read(authControllerProvider.notifier)
+                                .loginWithPassword(phone, _passwordCtrl.text.trim());
+                            if (!context.mounted || !ok) return;
+                            _goAfterAuth();
+                            return;
+                          }
+
                           final ok = await ref
                               .read(authControllerProvider.notifier)
-                              .requestOtp(_phoneCtrl.text.trim());
-                          if (ok && context.mounted) context.go('/otp');
+                              .requestOtp(phone, reason: 'register');
+                          if (!context.mounted || !ok) return;
+                          context.go('/otp?reason=register');
                         },
-                  child: Text(state.loading ? s.t('sending') : s.t('get_otp')),
+                  child: Text(state.loading ? s.t('sending') : s.t('confirm')),
                 ),
                 if (state.error != null) ...[
                   const SizedBox(height: 12),

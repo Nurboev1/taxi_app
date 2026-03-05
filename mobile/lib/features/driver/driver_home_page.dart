@@ -5,6 +5,7 @@ import 'package:taxi_mobile/core/api/api_client.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/core/widgets/animated_blobs_background.dart';
+import 'package:taxi_mobile/core/widgets/daytime_wave_background.dart';
 import 'package:taxi_mobile/core/widgets/first_time_tutorial_dialog.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
@@ -96,6 +97,15 @@ class _DriverHomePageState extends ConsumerState<DriverHomePage> {
       _DriverChatTab(s: s),
       _DriverProfileTab(s: s, isDark: isDark),
     ];
+    final tabContent = SafeArea(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        child: KeyedSubtree(
+          key: ValueKey(_tab),
+          child: pages[_tab],
+        ),
+      ),
+    );
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -105,18 +115,12 @@ class _DriverHomePageState extends ConsumerState<DriverHomePage> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: AnimatedBlobsBackground(
-        colors: [bg1, bg2],
-        child: SafeArea(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            child: KeyedSubtree(
-              key: ValueKey(_tab),
-              child: pages[_tab],
-            ),
-          ),
-        ),
-      ),
+      body: isDark
+          ? AnimatedBlobsBackground(
+              colors: [bg1, bg2],
+              child: tabContent,
+            )
+          : DaytimeWaveBackground(child: tabContent),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (v) => setState(() => _tab = v),

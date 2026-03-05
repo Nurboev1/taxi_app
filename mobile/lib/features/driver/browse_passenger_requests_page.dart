@@ -17,6 +17,8 @@ class BrowsePassengerRequestsPage extends ConsumerStatefulWidget {
 class _BrowsePassengerRequestsPageState
     extends ConsumerState<BrowsePassengerRequestsPage> {
   final Set<int> _locallyClaimed = <int>{};
+  final Map<int, DateTime> _decisionSeenAt = <int, DateTime>{};
+  static const Duration _decisionHighlightDuration = Duration(seconds: 22);
 
   String _matchText(AppStrings s, String? level) {
     switch (level) {
@@ -63,12 +65,57 @@ class _BrowsePassengerRequestsPageState
     return ok == true;
   }
 
+  void _syncDecisionHighlights(List<Map<String, dynamic>> items) {
+    final now = DateTime.now();
+    final visibleIds = <int>{};
+    for (final item in items) {
+      final id = item['id'] as int?;
+      if (id == null) continue;
+      visibleIds.add(id);
+      final claimState = item['claim_state']?.toString() ?? 'none';
+      if (claimState == 'accepted' || claimState == 'rejected') {
+        _decisionSeenAt.putIfAbsent(id, () => now);
+      } else {
+        _decisionSeenAt.remove(id);
+      }
+    }
+    _decisionSeenAt.removeWhere(
+      (id, seenAt) =>
+          !visibleIds.contains(id) ||
+          now.difference(seenAt) > _decisionHighlightDuration,
+    );
+  }
+
+  bool _isDecisionHighlighted(int requestId, String claimState) {
+    if (claimState != 'accepted' && claimState != 'rejected') return false;
+    final seenAt = _decisionSeenAt[requestId];
+    if (seenAt == null) return false;
+    return DateTime.now().difference(seenAt) <= _decisionHighlightDuration;
+  }
+
+  Widget _statusBadge(BuildContext context, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(text),
+    );
+  }
+
   Color? _cardColor(
-      BuildContext context, String claimState, bool locallyClaimed) {
-    if (claimState == 'accepted') {
+    String claimState,
+    bool locallyClaimed,
+    bool decisionHighlighted,
+  ) {
+    if (claimState == 'accepted' && decisionHighlighted) {
       return Colors.green.withValues(alpha: 0.22);
     }
-    if (claimState == 'pending' || locallyClaimed) {
+    if (claimState == 'rejected' && decisionHighlighted) {
+      return Colors.red.withValues(alpha: 0.18);
+    }
+    if (claimState == 'pending' || (locallyClaimed && claimState == 'none')) {
       return Colors.amber.withValues(alpha: 0.26);
     }
     return null;
@@ -90,6 +137,7 @@ class _BrowsePassengerRequestsPageState
         },
         child: requests.when(
           data: (items) {
+            _syncDecisionHighlights(items);
             if (items.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -123,10 +171,18 @@ class _BrowsePassengerRequestsPageState
                     final timeGap = r['time_gap_minutes'];
                     final claimState = (r['claim_state']?.toString() ?? 'none');
                     final localClaimed = _locallyClaimed.contains(requestId);
+                    final decisionHighlighted =
+                        _isDecisionHighlighted(requestId, claimState);
                     final isAccepted = claimState == 'accepted';
-                    final isPending = claimState == 'pending' || localClaimed;
-                    final cardColor =
-                        _cardColor(context, claimState, localClaimed);
+                    final isPending =
+                        claimState == 'pending' ||
+                        (localClaimed && claimState == 'none');
+                    final isRejected = claimState == 'rejected';
+                    final cardColor = _cardColor(
+                      claimState,
+                      localClaimed,
+                      decisionHighlighted,
+                    );
                     return Card(
                       color: cardColor,
                       child: ListTile(
@@ -175,26 +231,32 @@ class _BrowsePassengerRequestsPageState
                           ),
                         ),
                         trailing: isAccepted
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.22),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(s.t('claim_accepted_short')),
+                            ? _statusBadge(
+                                context,
+                                s.t('claim_accepted_short'),
+                                decisionHighlighted
+                                    ? Colors.green.withValues(alpha: 0.22)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
                               )
-                            : isPending
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.withValues(alpha: 0.26),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(s.t('claim_pending_short')),
+                            : isRejected
+                                ? _statusBadge(
+                                    context,
+                                    s.t('claim_rejected_short'),
+                                    decisionHighlighted
+                                        ? Colors.red.withValues(alpha: 0.2)
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest,
                                   )
-                                : PopupMenuButton<int>(
+                                : isPending
+                                    ? _statusBadge(
+                                        context,
+                                        s.t('claim_pending_short'),
+                                        Colors.amber.withValues(alpha: 0.26),
+                                      )
+                                    : PopupMenuButton<int>(
                                     onSelected: (tripId) async {
                                       final confirmed =
                                           await _confirmClaim(context);
