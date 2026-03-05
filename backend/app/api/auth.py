@@ -83,6 +83,8 @@ def _validate_password(password: str) -> str:
     normalized = (password or "").strip()
     if len(normalized) < 8:
         raise HTTPException(status_code=400, detail="Parol kamida 8 ta belgidan iborat bo'lishi kerak")
+    if len(normalized.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Parol juda uzun. Maksimal 72 bayt")
     return normalized
 
 
