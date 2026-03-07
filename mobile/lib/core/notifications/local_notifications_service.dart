@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class LocalNotificationsService {
   LocalNotificationsService();
 
+  static const String channelId = 'safaruz_alerts_v2';
+  static const String channelName = 'SafarUz Alerts';
+  static const String channelDescription =
+      'Important trip, chat and rating notifications';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -19,6 +24,16 @@ class LocalNotificationsService {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.requestNotificationsPermission();
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        channelId,
+        channelName,
+        description: channelDescription,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
 
     _initialized = true;
   }
@@ -30,11 +45,13 @@ class LocalNotificationsService {
   }) async {
     await init();
     const androidDetails = AndroidNotificationDetails(
-      'safaruz_notifications',
-      'SafarUz Notifications',
-      channelDescription: 'Chat, rating and trip notifications',
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
     );
     const details = NotificationDetails(android: androidDetails);
 

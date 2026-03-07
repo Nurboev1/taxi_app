@@ -7,6 +7,7 @@ from urllib.error import HTTPError, URLError
 from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
+FCM_ANDROID_CHANNEL_ID = "safaruz_alerts_v2"
 
 
 def _normalize_data(data: dict[str, str] | None) -> dict[str, str]:
@@ -33,6 +34,7 @@ def _send_fcm_legacy(
             "title": title,
             "body": body or "",
             "sound": "default",
+            "android_channel_id": FCM_ANDROID_CHANNEL_ID,
         },
         "data": _normalize_data(data),
     }
@@ -127,7 +129,10 @@ def _send_fcm_v1(
             "data": _normalize_data(data),
             "android": {
                 "priority": "HIGH",
-                "notification": {"sound": "default"},
+                "notification": {
+                    "sound": "default",
+                    "channel_id": FCM_ANDROID_CHANNEL_ID,
+                },
             },
         }
     }

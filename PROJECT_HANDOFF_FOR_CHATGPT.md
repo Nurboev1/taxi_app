@@ -45,6 +45,10 @@ Main branch head (local before this handoff update): `f1df2f7`
 - FCM push uchun dependency fix:
   - `backend/requirements.txt`ga `requests==2.32.3` qo'shildi
   - `backend/app/services/push.py` import xatosi logi aniqroq qilindi (`google-auth + requests`)
+- Push bildirishnomalarda Android ovozli/high-priority kelishi uchun:
+  - Notification channel `safaruz_alerts_v2` yaratildi (`Importance.max`, sound/vibration yoqilgan)
+  - `AndroidManifest.xml`ga `com.google.firebase.messaging.default_notification_channel_id=safaruz_alerts_v2` qo'shildi
+  - Backend FCM payloadga `channel_id/android_channel_id` qo'shildi
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
