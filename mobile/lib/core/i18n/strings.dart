@@ -67,7 +67,8 @@ class AppStrings {
       'male_seats': 'Erkak joylari',
       'female_seats': 'Ayol joylari',
       'selected_total': 'Tanlangan joylar',
-      'seat_mix_invalid': 'Erkak va ayol joylari yig\'indisi umumiy joyga teng bo\'lishi kerak',
+      'seat_mix_invalid':
+          'Erkak va ayol joylari yig\'indisi umumiy joyga teng bo\'lishi kerak',
       'select_time': 'Vaqtni tanlang',
       'time': 'Vaqt',
       'enter_time': 'Vaqtni kiriting',
@@ -89,7 +90,8 @@ class AppStrings {
       'open_chat': 'Chatni ochish',
       'trip_create': 'Safar yaratish',
       'trip_create_subtitle': 'Yo\'nalish, vaqt va narxni puxta tayyorlang.',
-      'request_create_subtitle': 'Yo\'nalish, vaqt va guruh tarkibini aniq ko\'rsating.',
+      'request_create_subtitle':
+          'Yo\'nalish, vaqt va guruh tarkibini aniq ko\'rsating.',
       'seat_price': 'Bir o\'rindiq narxi',
       'seat_count': 'O\'rindiqlar soni',
       'departure_time': 'Jo\'nash vaqti',
@@ -202,6 +204,49 @@ class AppStrings {
           'Chat bo\'limida yo\'lovchilar bilan muloqot qilasiz.',
       'tutorial_profile_desc':
           'Profil bo\'limida shaxsiy ma\'lumotlar, sozlamalar va tema boshqaruvi mavjud.',
+      'start_time_label': 'Boshlanish vaqti',
+      'end_time_label': 'Tugash vaqti',
+      'driver_flow_title': 'Haydovchi oqimi',
+      'driver_flow_subtitle':
+          'Safar joylash, mos yo\'lovchini topish va faol safarni boshqarish',
+      'passenger_flow_title': 'Yo\'lovchi oqimi',
+      'passenger_flow_subtitle':
+          'So\'rov yaratish, claimlarni kuzatish va safarni baholash',
+      'support_bot_subtitle': 'Telegram support bot',
+      'basic_info_title': 'Asosiy ma\'lumotlar',
+      'basic_info_subtitle': 'Shaxsiy ma\'lumot, til va ko\'rinish sozlamalari',
+      'role_documents_title': 'Rol va hujjatlar',
+      'role_documents_subtitle': 'Rejimni almashtirish yoki hujjatlarni ochish',
+      'role_select_subtitle':
+          'SafarUzdan qanday foydalanishingizga mos rejimni tanlang',
+      'profile_setup_driver_subtitle':
+          'Haydovchi profili va mashina ma\'lumotlarini kiriting',
+      'profile_setup_passenger_subtitle':
+          'Yo\'lovchi profili va til sozlamalarini kiriting',
+      'finish_setup_title': 'Profilni yakunlash',
+      'finish_setup_subtitle':
+          'Davom etish uchun asosiy maydonlarni to\'ldiring',
+      'chat_delete_title': 'Chatni o\'chirish',
+      'chat_delete_body':
+          'Ushbu chat ikkala tomon uchun ham butunlay o\'chiriladi. Davom etasizmi?',
+      'chat_delete_confirm': 'Ha, o\'chir',
+      'chat_deleted': 'Chat o\'chirildi',
+      'open_conversation': 'Suhbatni ochish',
+      'copy_name': 'Ismni nusxalash',
+      'copied': 'Nusxalandi',
+      'logout': 'Chiqish',
+      'rating_count': 'Baholar soni',
+      'visibility_on': 'Yoqilgan',
+      'visibility_off': 'O\'chirilgan',
+      'role_driver_subtitle':
+          'Safar e\'lonini joylash va yo\'lovchi qabul qilish',
+      'role_passenger_subtitle': 'Mos safar topish va haydovchini tanlash',
+      'driver_info_title': 'Haydovchi ma\'lumotlari',
+      'required_field': 'Majburiy maydon',
+      'plate_format_error': 'Format xato. Masalan: 01 A123BC',
+      'logout_confirm_body': 'Hisobdan chiqishni tasdiqlaysizmi?',
+      'role_switch_confirm': 'Rolni "{role}" ga almashtirishni tasdiqlaysizmi?',
+      'overall_rating': 'Umumiy reyting',
     },
     'ru': {
       'settings': 'Настройки',
@@ -382,6 +427,47 @@ class AppStrings {
       'tutorial_driver_chat_desc': 'В разделе Чат вы общаетесь с пассажирами.',
       'tutorial_profile_desc':
           'В разделе Профиль доступны личные данные, настройки и тема приложения.',
+      'start_time_label': 'Время начала',
+      'end_time_label': 'Время окончания',
+      'driver_flow_title': 'Сценарий водителя',
+      'driver_flow_subtitle':
+          'Публикация поездки, поиск пассажиров и управление активной поездкой',
+      'passenger_flow_title': 'Сценарий пассажира',
+      'passenger_flow_subtitle':
+          'Создание заявки, просмотр откликов и оценка поездки',
+      'support_bot_subtitle': 'Telegram support bot',
+      'basic_info_title': 'Основные данные',
+      'basic_info_subtitle': 'Личные данные, язык и настройки видимости',
+      'role_documents_title': 'Роль и документы',
+      'role_documents_subtitle': 'Смена режима или открытие документов',
+      'role_select_subtitle':
+          'Выберите режим, который соответствует вашему сценарию использования SafarUz',
+      'profile_setup_driver_subtitle':
+          'Заполните профиль водителя и данные автомобиля',
+      'profile_setup_passenger_subtitle':
+          'Заполните профиль пассажира и язык интерфейса',
+      'finish_setup_title': 'Завершение профиля',
+      'finish_setup_subtitle': 'Заполните основные поля, чтобы продолжить',
+      'chat_delete_title': 'Удалить чат',
+      'chat_delete_body':
+          'Этот чат будет полностью удалён для обеих сторон. Продолжить?',
+      'chat_delete_confirm': 'Да, удалить',
+      'chat_deleted': 'Чат удалён',
+      'open_conversation': 'Открыть чат',
+      'copy_name': 'Скопировать имя',
+      'copied': 'Скопировано',
+      'logout': 'Выйти',
+      'rating_count': 'Количество оценок',
+      'visibility_on': 'Включено',
+      'visibility_off': 'Выключено',
+      'role_driver_subtitle': 'Публикация поездок и приём заявок от пассажиров',
+      'role_passenger_subtitle': 'Поиск подходящей поездки и выбор водителя',
+      'driver_info_title': 'Данные водителя',
+      'required_field': 'Обязательное поле',
+      'plate_format_error': 'Неверный формат. Например: 01 A123BC',
+      'logout_confirm_body': 'Подтверждаете выход из аккаунта?',
+      'role_switch_confirm': 'Подтверждаете смену роли на "{role}"?',
+      'overall_rating': 'Общий рейтинг',
     },
     'en': {
       'settings': 'Settings',
@@ -437,7 +523,8 @@ class AppStrings {
       'male_seats': 'Male seats',
       'female_seats': 'Female seats',
       'selected_total': 'Selected seats',
-      'seat_mix_invalid': 'Male and female seats must add up to the total seats',
+      'seat_mix_invalid':
+          'Male and female seats must add up to the total seats',
       'select_time': 'Select time',
       'time': 'Time',
       'enter_time': 'Enter time',
@@ -458,8 +545,10 @@ class AppStrings {
       'hidden': 'Hidden',
       'open_chat': 'Open chat',
       'trip_create': 'Create trip',
-      'trip_create_subtitle': 'Set the route, timing, and price in a clean posting flow.',
-      'request_create_subtitle': 'Describe the route, timing, and exact group composition.',
+      'trip_create_subtitle':
+          'Set the route, timing, and price in a clean posting flow.',
+      'request_create_subtitle':
+          'Describe the route, timing, and exact group composition.',
       'seat_price': 'Price per seat',
       'seat_count': 'Seat count',
       'departure_time': 'Departure time',
@@ -570,6 +659,46 @@ class AppStrings {
           'Chat is where you communicate with passengers.',
       'tutorial_profile_desc':
           'Profile includes personal data, settings, and theme controls.',
+      'start_time_label': 'Start time',
+      'end_time_label': 'End time',
+      'driver_flow_title': 'Driver flow',
+      'driver_flow_subtitle': 'Posting, matching and managing active trips',
+      'passenger_flow_title': 'Passenger flow',
+      'passenger_flow_subtitle':
+          'Create a request, review claims, and rate the completed ride',
+      'support_bot_subtitle': 'Telegram support bot',
+      'basic_info_title': 'Basic info',
+      'basic_info_subtitle': 'Identity, language and visibility settings',
+      'role_documents_title': 'Role and documents',
+      'role_documents_subtitle': 'Switch mode or open legal documents',
+      'role_select_subtitle':
+          'Select the mode that matches how you will use SafarUz',
+      'profile_setup_driver_subtitle':
+          'Driver profile details and vehicle information',
+      'profile_setup_passenger_subtitle':
+          'Passenger profile details and language settings',
+      'finish_setup_title': 'Finish setup',
+      'finish_setup_subtitle': 'Complete the basic profile fields to continue',
+      'chat_delete_title': 'Delete chat',
+      'chat_delete_body':
+          'This chat will be permanently removed for both sides. Continue?',
+      'chat_delete_confirm': 'Yes, delete',
+      'chat_deleted': 'Chat deleted',
+      'open_conversation': 'Open conversation',
+      'copy_name': 'Copy name',
+      'copied': 'Copied',
+      'logout': 'Logout',
+      'rating_count': 'Rating count',
+      'visibility_on': 'On',
+      'visibility_off': 'Off',
+      'role_driver_subtitle': 'Post trips and accept passenger requests',
+      'role_passenger_subtitle': 'Find a matching ride and choose a driver',
+      'driver_info_title': 'Driver information',
+      'required_field': 'Required field',
+      'plate_format_error': 'Invalid format. Example: 01 A123BC',
+      'logout_confirm_body': 'Do you confirm logging out?',
+      'role_switch_confirm': 'Do you confirm switching role to "{role}"?',
+      'overall_rating': 'Overall rating',
     },
   };
 

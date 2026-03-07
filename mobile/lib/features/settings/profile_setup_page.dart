@@ -57,8 +57,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           NeoHeroCard(
             title: s.t('profile_setup'),
             subtitle: isDriver
-                ? 'Driver profile details and vehicle information'
-                : 'Passenger profile details and language settings',
+                ? s.t('profile_setup_driver_subtitle')
+                : s.t('profile_setup_passenger_subtitle'),
             icon: isDriver ? Icons.local_taxi_rounded : Icons.person_rounded,
             badges: [
               NeoBadge(
@@ -74,9 +74,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const NeoSectionHeader(
-                    title: 'Finish Setup',
-                    subtitle: 'Complete the basic profile fields to continue',
+                  NeoSectionHeader(
+                    title: s.t('finish_setup_title'),
+                    subtitle: s.t('finish_setup_subtitle'),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -143,11 +143,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                             !isValidUzPlate(normalizedCarNumber)) {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Mashina raqami formati xato. Masalan: 01 A123BC",
-                              ),
-                            ),
+                            SnackBar(content: Text(s.t('plate_format_error'))),
                           );
                           return;
                         }

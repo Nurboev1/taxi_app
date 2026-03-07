@@ -33,12 +33,12 @@ class MyReceivedRatingsPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Umumiy reyting",
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(s.t('overall_rating'),
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 RatingBadge(rating: avg),
                 const SizedBox(height: 8),
-                Text('Baholar soni: $total'),
+                Text('${s.t('rating_count')}: $total'),
               ],
             ),
           ),
@@ -47,7 +47,7 @@ class MyReceivedRatingsPage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Olgan baholarim')),
+      appBar: AppBar(title: Text(s.t('home_driver_my_ratings'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(receivedRatingsProvider);

@@ -24,7 +24,7 @@ class RolePage extends ConsumerWidget {
         children: [
           NeoHeroCard(
             title: s.t('choose_role'),
-            subtitle: 'Select the mode that matches how you will use SafarUz',
+            subtitle: s.t('role_select_subtitle'),
             icon: Icons.swap_horiz_rounded,
             badges: [
               NeoBadge(
@@ -44,8 +44,7 @@ class RolePage extends ConsumerWidget {
                 _RoleCard(
                   icon: Icons.local_taxi_outlined,
                   title: s.t('driver'),
-                  subtitle:
-                      'Safar e\'lonini joylash va yo\'lovchi qabul qilish',
+                  subtitle: s.t('role_driver_subtitle'),
                   onTap: () async {
                     try {
                       await ref
@@ -71,7 +70,7 @@ class RolePage extends ConsumerWidget {
                 _RoleCard(
                   icon: Icons.person_outline,
                   title: s.t('passenger'),
-                  subtitle: 'Mos safar topish va haydovchini tanlash',
+                  subtitle: s.t('role_passenger_subtitle'),
                   onTap: () async {
                     await ref
                         .read(authControllerProvider.notifier)

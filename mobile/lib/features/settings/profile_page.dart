@@ -55,7 +55,9 @@ class ProfilePage extends ConsumerWidget {
               Expanded(
                 child: NeoMetricCard(
                   label: s.t('phone'),
-                  value: p['phone_visible'] == true ? 'ON' : 'OFF',
+                  value: p['phone_visible'] == true
+                      ? s.t('visibility_on')
+                      : s.t('visibility_off'),
                   icon: Icons.phone_outlined,
                   tint: Theme.of(context).colorScheme.secondary,
                 ),
@@ -136,7 +138,7 @@ class ProfilePage extends ConsumerWidget {
                           children: [
                             RatingBadge(rating: avg),
                             const SizedBox(width: 12),
-                            Text('Baholar soni: $total'),
+                            Text('${s.t('rating_count')}: $total'),
                           ],
                         );
                       },
@@ -166,8 +168,8 @@ class ProfilePage extends ConsumerWidget {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Tasdiqlash'),
-                    content: const Text('Hisobdan chiqishni tasdiqlaysizmi?'),
+                    title: Text(s.t('confirm')),
+                    content: Text(s.t('logout_confirm_body')),
                     actionsAlignment: MainAxisAlignment.spaceBetween,
                     actions: [
                       TextButton(
@@ -186,7 +188,7 @@ class ProfilePage extends ConsumerWidget {
                 if (context.mounted) context.go('/auth');
               },
               icon: const Icon(Icons.logout_rounded),
-              label: const Text('Chiqish'),
+              label: Text(s.t('logout')),
             ),
           ),
         ],

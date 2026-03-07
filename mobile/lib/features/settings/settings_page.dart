@@ -57,14 +57,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Haydovchi ma'lumotlari",
+                Text(s.t('driver_info_title'),
                     style: Theme.of(ctx).textTheme.titleMedium),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: modelCtrl,
                   decoration: InputDecoration(labelText: s.t('car_model')),
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Majburiy maydon'
+                      ? s.t('required_field')
                       : null,
                 ),
                 const SizedBox(height: 8),
@@ -80,9 +80,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   validator: (v) {
                     final val = (v ?? '').trim();
-                    if (val.isEmpty) return 'Majburiy maydon';
+                    if (val.isEmpty) return s.t('required_field');
                     if (!isValidUzPlate(val)) {
-                      return "Format xato. Masalan: 01 A123BC";
+                      return s.t('plate_format_error');
                     }
                     return null;
                   },
@@ -118,8 +118,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Tasdiqlash'),
-        content: Text('Rolni "$roleName" ga almashtirishni tasdiqlaysizmi?'),
+        title: Text(s.t('confirm')),
+        content: Text(
+          s.t('role_switch_confirm').replaceFirst('{role}', roleName),
+        ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
@@ -136,11 +138,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   bool _validateCarPlateIfNeeded(bool isDriver) {
     if (!isDriver) return true;
+    final s = AppStrings.of(_language);
     final val = normalizeUzPlate(_carNumber.text);
     if (val.isNotEmpty && !isValidUzPlate(val)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Mashina raqami formati xato. Masalan: 01 A123BC")),
+        SnackBar(content: Text(s.t('plate_format_error'))),
       );
       return false;
     }
@@ -216,9 +218,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const NeoSectionHeader(
-                    title: 'Basic Info',
-                    subtitle: 'Identity, language and visibility settings',
+                  NeoSectionHeader(
+                    title: s.t('basic_info_title'),
+                    subtitle: s.t('basic_info_subtitle'),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -322,9 +324,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const NeoSectionHeader(
-                    title: 'Role & Documents',
-                    subtitle: 'Switch mode or open legal documents',
+                  NeoSectionHeader(
+                    title: s.t('role_documents_title'),
+                    subtitle: s.t('role_documents_subtitle'),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(

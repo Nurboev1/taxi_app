@@ -176,9 +176,8 @@ class _DriverChatTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Chatni o'chirish"),
-        content: const Text(
-            "Ushbu chat ikkala tomon uchun ham butunlay o'chiriladi. Davom etasizmi?"),
+        title: Text(s.t('chat_delete_title')),
+        content: Text(s.t('chat_delete_body')),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
@@ -186,7 +185,7 @@ class _DriverChatTab extends ConsumerWidget {
               child: const Text("Yo'q")),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text("Ha, o'chir")),
+              child: Text(s.t('chat_delete_confirm'))),
         ],
       ),
     );
@@ -195,7 +194,7 @@ class _DriverChatTab extends ConsumerWidget {
       await ref.read(chatActionsProvider).deleteChat(chatId);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Chat o'chirildi")));
+          .showSnackBar(SnackBar(content: Text(s.t('chat_deleted'))));
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,7 +219,7 @@ class _DriverChatTab extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.chat_bubble_outline),
-              title: const Text('Suhbatni ochish'),
+              title: Text(s.t('open_conversation')),
               onTap: () {
                 Navigator.pop(ctx);
                 context.push('/chat/$chatId');
@@ -228,8 +227,8 @@ class _DriverChatTab extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text("Chatni o'chirish",
-                  style: TextStyle(color: Colors.red)),
+              title: Text(s.t('chat_delete_title'),
+                  style: const TextStyle(color: Colors.red)),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _deleteChat(context, ref, chatId);
@@ -357,9 +356,9 @@ class _DriverDashboard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        const NeoSectionHeader(
-          title: 'Driver Flow',
-          subtitle: 'Posting, matching and managing active trips',
+        NeoSectionHeader(
+          title: s.t('driver_flow_title'),
+          subtitle: s.t('driver_flow_subtitle'),
         ),
         const SizedBox(height: 10),
         NeoActionCard(
@@ -395,7 +394,9 @@ class _DriverTripsTab extends StatelessWidget {
           subtitle: s.t('home_driver_my_trips_subtitle'),
           icon: Icons.route_rounded,
           badges: [
-            NeoBadge(icon: Icons.star_outline_rounded, label: s.t('home_driver_my_ratings')),
+            NeoBadge(
+                icon: Icons.star_outline_rounded,
+                label: s.t('home_driver_my_ratings')),
           ],
         ),
         const SizedBox(height: 12),
@@ -470,7 +471,7 @@ class _DriverProfileTab extends ConsumerWidget {
         NeoActionCard(
           icon: Icons.support_agent_outlined,
           title: s.t('contact_support'),
-          subtitle: 'Telegram: @SafarUzSupportBot',
+          subtitle: s.t('support_bot_subtitle'),
           onTap: () => _openSupportBot(),
           tint: Colors.orange.shade700,
         ),

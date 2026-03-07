@@ -180,10 +180,8 @@ class _PassengerChatTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Chatni o'chirish"),
-        content: const Text(
-          "Ushbu chat ikkala tomon uchun ham butunlay o'chiriladi. Davom etasizmi?",
-        ),
+        title: Text(s.t('chat_delete_title')),
+        content: Text(s.t('chat_delete_body')),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
@@ -192,7 +190,7 @@ class _PassengerChatTab extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Ha, o'chir"),
+            child: Text(s.t('chat_delete_confirm')),
           ),
         ],
       ),
@@ -203,7 +201,7 @@ class _PassengerChatTab extends ConsumerWidget {
       await ref.read(chatActionsProvider).deleteChat(chatId);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Chat o'chirildi")),
+        SnackBar(content: Text(s.t('chat_deleted'))),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -291,11 +289,12 @@ class _PassengerChatTab extends ConsumerWidget {
                         await _deleteChat(context, ref, chatId);
                       }
                     },
-                    itemBuilder: (_) => const [
+                    itemBuilder: (_) => [
                       PopupMenuItem(
-                          value: 'open', child: Text("Suhbatni ochish")),
+                          value: 'open', child: Text(s.t('open_conversation'))),
                       PopupMenuItem(
-                          value: 'delete', child: Text("Chatni o'chirish")),
+                          value: 'delete',
+                          child: Text(s.t('chat_delete_title'))),
                     ],
                   ),
                 ),
@@ -358,9 +357,9 @@ class _PassengerDashboard extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 14),
-        const NeoSectionHeader(
-          title: 'Passenger Flow',
-          subtitle: 'Create a request, track matching and rate completed trips',
+        NeoSectionHeader(
+          title: s.t('passenger_flow_title'),
+          subtitle: s.t('passenger_flow_subtitle'),
         ),
         const SizedBox(height: 10),
         NeoActionCard(
@@ -476,7 +475,7 @@ class _PassengerProfileTab extends ConsumerWidget {
         NeoActionCard(
           icon: Icons.support_agent_outlined,
           title: s.t('contact_support'),
-          subtitle: 'Telegram: @SafarUzSupportBot',
+          subtitle: s.t('support_bot_subtitle'),
           onTap: _openSupportBot,
           tint: Colors.orange.shade700,
         ),

@@ -22,9 +22,8 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Chatni o'chirish"),
-        content: const Text(
-            "Ushbu chat ikkala tomon uchun ham butunlay o'chiriladi. Davom etasizmi?"),
+        title: Text(s.t('chat_delete_title')),
+        content: Text(s.t('chat_delete_body')),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
@@ -32,7 +31,7 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
               child: const Text("Yo'q")),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text("Ha, o'chir")),
+              child: Text(s.t('chat_delete_confirm'))),
         ],
       ),
     );
@@ -41,7 +40,7 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
       await ref.read(chatActionsProvider).deleteChat(chatId);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Chat o'chirildi")));
+          .showSnackBar(SnackBar(content: Text(s.t('chat_deleted'))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +120,7 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
                           await Clipboard.setData(ClipboardData(text: title));
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Nusxalandi')),
+                            SnackBar(content: Text(s.t('copied'))),
                           );
                           return;
                         }
@@ -129,12 +128,12 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
                           await _deleteChat(c['chat_id'] as int, s);
                         }
                       },
-                      itemBuilder: (_) => const [
+                      itemBuilder: (_) => [
                         PopupMenuItem(
-                            value: 'copy', child: Text('Ismni nusxalash')),
+                            value: 'copy', child: Text(s.t('copy_name'))),
                         PopupMenuItem(
                           value: 'delete',
-                          child: Text("Chatni o'chirish"),
+                          child: Text(s.t('chat_delete_title')),
                         ),
                       ],
                     ),

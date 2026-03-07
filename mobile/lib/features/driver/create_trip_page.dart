@@ -43,7 +43,8 @@ class _CreateTripPageState extends ConsumerState<CreateTripPage> {
       initialTime: TimeOfDay.fromDateTime(current),
     );
     if (time == null) return;
-    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final dt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
     setState(() {
       if (isStart) {
         _start = dt;
@@ -89,7 +90,8 @@ class _CreateTripPageState extends ConsumerState<CreateTripPage> {
       if (!mounted) return;
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: s.t('trip_create_error')));
+      setState(() =>
+          _error = apiErrorMessage(e, fallback: s.t('trip_create_error')));
     }
   }
 
@@ -244,7 +246,7 @@ class _CreateTripPageState extends ConsumerState<CreateTripPage> {
                   _TimeTile(
                     icon: Icons.flight_takeoff_rounded,
                     color: theme.colorScheme.primary,
-                    label: s.t('departure_time'),
+                    label: s.t('start_time_label'),
                     value: _start == null
                         ? s.t('pick_start')
                         : DateFormat('dd.MM.yyyy  HH:mm').format(_start!),
@@ -254,7 +256,7 @@ class _CreateTripPageState extends ConsumerState<CreateTripPage> {
                   _TimeTile(
                     icon: Icons.flag_circle_rounded,
                     color: theme.colorScheme.secondary,
-                    label: s.t('arrival_time'),
+                    label: s.t('end_time_label'),
                     value: _end == null
                         ? s.t('pick_end')
                         : DateFormat('dd.MM.yyyy  HH:mm').format(_end!),
