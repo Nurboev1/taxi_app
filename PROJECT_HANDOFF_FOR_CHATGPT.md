@@ -659,6 +659,9 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
   - redesign paytida qolib ketgan hardcoded English/Uzbek matnlarning asosiy qismi `mobile/lib/core/i18n/strings.dart` kalitlariga ko'chirildi
   - `mobile/lib/features/driver/create_trip_page.dart` ichida vaqt labeli `Jo'nash/Tugash` chalkashligidan `Boshlanish/Tugash` ko'rinishiga to'g'rilandi (`start_time_label`, `end_time_label`)
   - `mobile/lib/features/driver/my_received_ratings_page.dart` ham lokalizatsiyaga yaqinlashtirildi
+  - `mobile/lib/features/settings/profile_page.dart` ichida haydovchi rating count joylashuvi qayta tartiblandi
+  - `mobile/lib/features/chat/chat_page.dart` ichidagi katta hero blok olib tashlandi
+  - chat sahifasi birinchi ochilganda endi oxirgi xabarga avtomatik tushadi
 - Eslatma:
   - `backend/.env.example` user tomonidan dirty; commitga qo'shmaslik kerak
   - agar keyingi redesign davom etsa, auth page'lar (`auth_page.dart`, `password_login_page.dart`, `otp_page.dart`, `set_password_page.dart`) ham shu neo vizual tizimga ko'chirilishi mumkin

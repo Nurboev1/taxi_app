@@ -134,12 +134,35 @@ class ProfilePage extends ConsumerWidget {
                                 0;
                         final total =
                             (snapshot.data?['total'] as num?)?.toInt() ?? 0;
-                        return Row(
-                          children: [
-                            RatingBadge(rating: avg),
-                            const SizedBox(width: 12),
-                            Text('${s.t('rating_count')}: $total'),
-                          ],
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.42),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RatingBadge(rating: avg),
+                              const SizedBox(height: 10),
+                              Text(
+                                '${s.t('rating_count')}: $total',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),

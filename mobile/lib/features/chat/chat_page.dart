@@ -26,6 +26,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _pollTimer;
   bool _isNearBottom = true;
   int? _lastMessageId;
+  bool _initialScrollDone = false;
 
   @override
   void initState() {
@@ -104,25 +105,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ],
       child: Column(
         children: [
-          chatAsync.maybeWhen(
-            data: (chat) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: NeoHeroCard(
-                title: chat['peer_name']?.toString() ?? s.t('chat'),
-                subtitle:
-                    chat['peer_phone']?.toString() ?? s.t('write_message'),
-                icon: Icons.forum_outlined,
-                badges: [
-                  NeoBadge(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    label:
-                        '${((chat['messages'] as List?) ?? const []).length}',
-                  ),
-                ],
-              ),
-            ),
-            orElse: () => const SizedBox.shrink(),
-          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -134,6 +116,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       (chat['messages'] as List).cast<Map<String, dynamic>>();
                   if (all.isEmpty) {
                     _lastMessageId = null;
+                    _initialScrollDone = false;
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
@@ -150,11 +133,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   }
                   final latestId = all.last['id'] as int?;
                   final hadMessagesBefore = _lastMessageId != null;
-                  final shouldStick = !hadMessagesBefore ||
-                      (_isNearBottom && latestId != _lastMessageId);
+                  if (!_initialScrollDone) {
+                    _initialScrollDone = true;
+                    _scrollToBottom(animate: false);
+                  }
+                  final shouldStick = hadMessagesBefore &&
+                      _isNearBottom &&
+                      latestId != _lastMessageId;
                   _lastMessageId = latestId;
                   if (shouldStick) {
-                    _scrollToBottom(animate: hadMessagesBefore);
+                    _scrollToBottom();
                   }
                   return ListView.builder(
                     controller: _scrollCtrl,
