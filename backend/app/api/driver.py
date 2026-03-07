@@ -17,6 +17,20 @@ from app.services.notifications import create_notification
 router = APIRouter(prefix="/driver", tags=["driver"])
 
 
+def _request_seat_mix(req: PassengerRequest, passenger: User | None = None) -> tuple[int, int]:
+    male = int(req.male_seats or 0)
+    female = int(req.female_seats or 0)
+    if male + female == req.seats_needed:
+        return male, female
+
+    if passenger and passenger.gender:
+        if passenger.gender.value == "male":
+            return req.seats_needed, 0
+        if passenger.gender.value == "female":
+            return 0, req.seats_needed
+    return 0, 0
+
+
 def _route_match(a_from: str, a_to: str, b_from: str, b_to: str) -> bool:
     af = a_from.strip().lower()
     at = a_to.strip().lower()
@@ -157,6 +171,7 @@ def trip_passengers(
         passenger = db.scalar(select(User).where(User.id == req.passenger_id))
         if not passenger:
             continue
+        male_seats, female_seats = _request_seat_mix(req, passenger)
         passenger_trips_count = (
             db.scalar(
                 select(RequestClaim.id)
@@ -197,6 +212,8 @@ def trip_passengers(
                 passenger_phone=passenger.phone if passenger.phone_visible else None,
                 passenger_trips_count=completed_count if passenger_trips_count else 0,
                 seats_needed=req.seats_needed,
+                male_seats=male_seats,
+                female_seats=female_seats,
                 from_location=req.from_location,
                 to_location=req.to_location,
             )
@@ -308,6 +325,7 @@ def browse_open_requests(
             claim_state_map[req.id] = "accepted"
     passenger_ids = {r.passenger_id for r in reqs}
     passengers = db.scalars(select(User).where(User.id.in_(passenger_ids))).all() if passenger_ids else []
+    passenger_map = {u.id: u for u in passengers}
     passenger_gender_map = {u.id: (u.gender.value if u.gender else None) for u in passengers}
 
     if not reqs:
@@ -324,6 +342,8 @@ def browse_open_requests(
                 end_time=req.end_time,
                 preferred_time=req.preferred_time,
                 seats_needed=req.seats_needed,
+                male_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[0],
+                female_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[1],
                 status=req.status,
                 chosen_claim_id=req.chosen_claim_id,
                 chosen_driver_id=req.chosen_driver_id,
@@ -374,6 +394,8 @@ def browse_open_requests(
                     end_time=req.end_time,
                     preferred_time=req.preferred_time,
                     seats_needed=req.seats_needed,
+                    male_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[0],
+                    female_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[1],
                     status=req.status,
                     chosen_claim_id=req.chosen_claim_id,
                     chosen_driver_id=req.chosen_driver_id,
@@ -402,6 +424,8 @@ def browse_open_requests(
             end_time=req.end_time,
             preferred_time=req.preferred_time,
             seats_needed=req.seats_needed,
+            male_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[0],
+            female_seats=_request_seat_mix(req, passenger_map.get(req.passenger_id))[1],
             status=req.status,
             chosen_claim_id=req.chosen_claim_id,
             chosen_driver_id=req.chosen_driver_id,

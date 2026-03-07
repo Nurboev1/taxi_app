@@ -42,6 +42,25 @@ class _BrowsePassengerRequestsPageState
     }
   }
 
+  List<Widget> _compositionChips(Map<String, dynamic> request, AppStrings s) {
+    final maleSeats = (request['male_seats'] as num?)?.toInt() ?? 0;
+    final femaleSeats = (request['female_seats'] as num?)?.toInt() ?? 0;
+    return [
+      if (maleSeats > 0)
+        Chip(
+          avatar: Icon(Icons.male, color: Colors.blue.shade600, size: 18),
+          label: Text('${s.t('male_seats')}: $maleSeats'),
+          visualDensity: VisualDensity.compact,
+        ),
+      if (femaleSeats > 0)
+        Chip(
+          avatar: Icon(Icons.female, color: Colors.pink.shade400, size: 18),
+          label: Text('${s.t('female_seats')}: $femaleSeats'),
+          visualDensity: VisualDensity.compact,
+        ),
+    ];
+  }
+
   Future<bool> _confirmClaim(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -227,6 +246,7 @@ class _BrowsePassengerRequestsPageState
                                       Text('${s.t('time_gap')}: $timeGap min'),
                                   visualDensity: VisualDensity.compact,
                                 ),
+                              ..._compositionChips(r, s),
                             ],
                           ),
                         ),

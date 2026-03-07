@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-07 (Asia/Tashkent, evening sync)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `f1df2f7`
+Main branch head (local before this handoff update): `20e3d7e`
 
 ## 0) So'nggi yangilanish (2026-03-07)
 
@@ -54,6 +54,17 @@ Main branch head (local before this handoff update): `f1df2f7`
   - "no valid provider" chalg'ituvchi logi o'rniga:
     - `no provider configured` (haqiqatan konfiguratsiya yo'q bo'lsa)
     - `configured providers failed (...)` (provider bor-u yuborish yiqilsa)
+- Yo'lovchi group composition logikasi tuzatildi:
+  - `passenger_requests` jadvaliga `male_seats` va `female_seats` qo'shildi
+  - yangi migration: `backend/alembic/versions/0015_request_seat_mix.py`
+  - eski requestlar migration paytida user account jinsiga qarab backfill qilinadi
+  - `trip_gender_stats()` endi `seats_needed`ni account jinsiga ko'paytirib yubormaydi, explicit compositionni ishlatadi
+  - driver request listi, trip passenger detaili va passenger request status sahifalarida composition ko'rinadi
+- `Create Request` va `Create Trip` mobile sahifalari qayta dizayn qilindi:
+  - katta hero panel
+  - aniqroq vaqt/location bloklari
+  - request sahifasida seat composition counterlar
+  - trip sahifasida seat/price/time sectionlari chiroyliroq qayta ishlangan
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
@@ -61,6 +72,7 @@ Main branch head (local before this handoff update): `f1df2f7`
   - `backend/alembic/versions/0012_admin_audit_logs.py`
   - `backend/alembic/versions/0013_support_tickets_and_telegram_sessions.py` (`revision` ID: `0013_support_tickets`, sababi `alembic_version` maydoni `varchar(32)`)
   - `backend/alembic/versions/0014_ticket_messages.py`
+  - `backend/alembic/versions/0015_request_seat_mix.py`
 - Eslatma: productionda albatta:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`
@@ -84,6 +96,8 @@ Qo'shimcha:
 
 ### 2.1 Git holati
 So'nggi commitlar:
+- `20e3d7e` Improve FCM failure logging and provider failure messages
+- `bcbcfaa` Enable audible Android push notifications with high-priority channel
 - `f1df2f7` Add support bot action to bottom of profile tabs
 - `cc06325` Point legal support contacts to SafarUz Telegram bot
 - `d4b3fe7` Implement threaded support tickets with bot close and auto-close

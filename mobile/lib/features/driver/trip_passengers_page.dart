@@ -20,6 +20,15 @@ class TripPassengersPage extends ConsumerStatefulWidget {
 class _TripPassengersPageState extends ConsumerState<TripPassengersPage> {
   String? _error;
 
+  String _seatComposition(Map<String, dynamic> p, AppStrings s) {
+    final maleSeats = (p['male_seats'] as num?)?.toInt() ?? 0;
+    final femaleSeats = (p['female_seats'] as num?)?.toInt() ?? 0;
+    final parts = <String>[];
+    if (maleSeats > 0) parts.add('${s.t('male_seats')}: $maleSeats');
+    if (femaleSeats > 0) parts.add('${s.t('female_seats')}: $femaleSeats');
+    return parts.isEmpty ? '${s.t('seats')}: ${p['seats_needed']}' : parts.join(' | ');
+  }
+
   Future<void> _call(String phone) async {
     final uri = Uri.parse('tel:$phone');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -49,6 +58,7 @@ class _TripPassengersPageState extends ConsumerState<TripPassengersPage> {
               Text('${s.t('first_name')}: ${p['passenger_first_name'] ?? '-'}'),
               Text('${s.t('last_name')}: ${p['passenger_last_name'] ?? '-'}'),
               Text('${s.t('gender_short')}: ${p['passenger_gender'] ?? '-'}'),
+              Text(_seatComposition(p, s)),
               Text('${s.t('phone')}: ${phone ?? s.t('hidden')}'),
               Text('Safarlar soni: ${p['passenger_trips_count'] ?? 0}'),
               const SizedBox(height: 12),
@@ -197,7 +207,7 @@ class _TripPassengersPageState extends ConsumerState<TripPassengersPage> {
                         ),
                         title: Text(p['passenger_name'].toString()),
                         subtitle: Text(
-                            '${s.t('gender_short')}: ${p['passenger_gender'] ?? '-'} | ${s.t('seats')}: ${p['seats_needed']}'),
+                            '${s.t('gender_short')}: ${p['passenger_gender'] ?? '-'} | ${_seatComposition(p, s)}'),
                         trailing: Wrap(
                           spacing: 2,
                           children: [

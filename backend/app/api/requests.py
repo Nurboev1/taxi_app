@@ -26,6 +26,21 @@ from app.services.notifications import create_notification
 router = APIRouter(tags=["requests"])
 
 
+def _request_seat_mix(req: PassengerRequest, passenger: User | None = None) -> tuple[int, int]:
+    male = int(req.male_seats or 0)
+    female = int(req.female_seats or 0)
+    if male + female == req.seats_needed:
+        return male, female
+
+    # Legacy fallback for rows created before explicit seat composition existed.
+    if passenger and passenger.gender:
+        if passenger.gender.value == "male":
+            return req.seats_needed, 0
+        if passenger.gender.value == "female":
+            return 0, req.seats_needed
+    return 0, 0
+
+
 def route_match(a_from: str, a_to: str, b_from: str, b_to: str) -> bool:
     af = a_from.strip().lower()
     at = a_to.strip().lower()
@@ -63,12 +78,9 @@ def trip_gender_stats(db: Session, trip_id: int) -> tuple[int, int]:
         if not req:
             continue
         passenger = db.scalar(select(User).where(User.id == req.passenger_id))
-        if not passenger or not passenger.gender:
-            continue
-        if passenger.gender.value == "male":
-            male += req.seats_needed
-        elif passenger.gender.value == "female":
-            female += req.seats_needed
+        req_male, req_female = _request_seat_mix(req, passenger)
+        male += req_male
+        female += req_female
     return male, female
 
 
@@ -94,6 +106,8 @@ def create_request(
         end_time=payload.preferred_time,
         preferred_time=payload.preferred_time,
         seats_needed=payload.seats_needed,
+        male_seats=payload.male_seats,
+        female_seats=payload.female_seats,
     )
     db.add(req)
     db.commit()

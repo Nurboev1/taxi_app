@@ -76,7 +76,7 @@ class RequestStatusPage extends ConsumerWidget {
                   title:
                       Text('${req['from_location']} -> ${req['to_location']}'),
                   subtitle: Text(
-                      '${s.t('status')}: ${req['status']} | ${s.t('required_seats')}: ${req['seats_needed']}'),
+                      '${s.t('status')}: ${req['status']} | ${s.t('required_seats')}: ${req['seats_needed']}\n${s.t('male_seats')}: ${req['male_seats'] ?? 0} | ${s.t('female_seats')}: ${req['female_seats'] ?? 0}'),
                 ),
               ),
               error: (_, __) => Text(s.t('request_load_error')),

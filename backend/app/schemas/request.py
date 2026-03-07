@@ -1,7 +1,7 @@
 ﻿from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import ClaimStatus, RequestStatus
 
@@ -11,6 +11,14 @@ class PassengerRequestCreateIn(BaseModel):
     to_location: str
     preferred_time: datetime
     seats_needed: int = Field(ge=1, le=4)
+    male_seats: int = Field(default=0, ge=0, le=4)
+    female_seats: int = Field(default=0, ge=0, le=4)
+
+    @model_validator(mode="after")
+    def validate_seat_mix(self):
+        if self.male_seats + self.female_seats != self.seats_needed:
+            raise ValueError("male_seats + female_seats seats_needed ga teng bo'lishi kerak")
+        return self
 
 
 class PassengerRequestOut(BaseModel):
@@ -23,6 +31,8 @@ class PassengerRequestOut(BaseModel):
     end_time: datetime
     preferred_time: datetime | None = None
     seats_needed: int
+    male_seats: int = 0
+    female_seats: int = 0
     status: RequestStatus
     chosen_claim_id: int | None = None
     chosen_driver_id: int | None = None
@@ -102,5 +112,7 @@ class TripPassengerOut(BaseModel):
     passenger_phone: str | None = None
     passenger_trips_count: int = 0
     seats_needed: int
+    male_seats: int = 0
+    female_seats: int = 0
     from_location: str
     to_location: str

@@ -73,6 +73,8 @@ class PassengerActions {
     required String to,
     required DateTime preferredTime,
     required int seatsNeeded,
+    required int maleSeats,
+    required int femaleSeats,
   }) async {
     final res = await ref.read(apiClientProvider).post(
       Endpoints.createPassengerRequest,
@@ -81,6 +83,8 @@ class PassengerActions {
         'to_location': to,
         'preferred_time': preferredTime.toUtc().toIso8601String(),
         'seats_needed': seatsNeeded,
+        'male_seats': maleSeats,
+        'female_seats': femaleSeats,
       },
     );
     final id = res.data['id'] as int;

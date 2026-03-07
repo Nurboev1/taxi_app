@@ -18,6 +18,8 @@ class PassengerRequest(Base):
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     preferred_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)
     seats_needed: Mapped[int] = mapped_column(Integer)
+    male_seats: Mapped[int] = mapped_column(Integer, default=0)
+    female_seats: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[RequestStatus] = mapped_column(Enum(RequestStatus), default=RequestStatus.open, index=True)
     chosen_claim_id: Mapped[int | None] = mapped_column(ForeignKey("request_claims.id"), nullable=True)
     chosen_driver_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
