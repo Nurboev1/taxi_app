@@ -49,6 +49,11 @@ Main branch head (local before this handoff update): `f1df2f7`
   - Notification channel `safaruz_alerts_v2` yaratildi (`Importance.max`, sound/vibration yoqilgan)
   - `AndroidManifest.xml`ga `com.google.firebase.messaging.default_notification_channel_id=safaruz_alerts_v2` qo'shildi
   - Backend FCM payloadga `channel_id/android_channel_id` qo'shildi
+- FCM loglari aniqroq qilindi:
+  - `backend/app/services/push.py` endi v1 HTTP xatodan `fcm_code` (`UNREGISTERED`, `SENDER_ID_MISMATCH`, va h.k.) ni chiqaradi
+  - "no valid provider" chalg'ituvchi logi o'rniga:
+    - `no provider configured` (haqiqatan konfiguratsiya yo'q bo'lsa)
+    - `configured providers failed (...)` (provider bor-u yuborish yiqilsa)
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:

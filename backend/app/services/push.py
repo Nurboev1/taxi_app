@@ -151,7 +151,30 @@ def _send_fcm_v1(
             return 200 <= int(resp.status) < 300
     except HTTPError as e:
         body_text = e.read().decode("utf-8", errors="ignore")
-        logger.error("FCM v1 HTTP error: status=%s body=%s", e.code, body_text)
+        # Try to extract a compact FCM error code (e.g. UNREGISTERED, SENDER_ID_MISMATCH).
+        fcm_code = ""
+        try:
+            payload = json.loads(body_text)
+            details = (
+                payload.get("error", {}).get("details", [])
+                if isinstance(payload, dict)
+                else []
+            )
+            for item in details:
+                if isinstance(item, dict) and item.get("errorCode"):
+                    fcm_code = str(item.get("errorCode"))
+                    break
+        except Exception:
+            pass
+        if fcm_code:
+            logger.error(
+                "FCM v1 HTTP error: status=%s fcm_code=%s body=%s",
+                e.code,
+                fcm_code,
+                body_text,
+            )
+        else:
+            logger.error("FCM v1 HTTP error: status=%s body=%s", e.code, body_text)
         return False
     except URLError as e:
         logger.error("FCM v1 URL error: %s", e)
@@ -168,16 +191,27 @@ def send_fcm_push(
         logger.warning("FCM push skipped: user token is empty")
         return False
 
+    attempted_providers: list[str] = []
+
     # Prefer FCM HTTP v1 if service account is configured.
     if settings.fcm_service_account_file.strip():
+        attempted_providers.append("v1")
         if _send_fcm_v1(token=token, title=title, body=body, data=data):
             return True
         logger.warning("FCM v1 send failed, trying legacy key if available")
 
-    if _send_fcm_legacy(token=token, title=title, body=body, data=data):
-        return True
+    if settings.fcm_server_key.strip():
+        attempted_providers.append("legacy")
+        if _send_fcm_legacy(token=token, title=title, body=body, data=data):
+            return True
 
-    logger.warning(
-        "FCM push failed: no valid provider (set FCM_SERVICE_ACCOUNT_FILE for v1 or FCM_SERVER_KEY for legacy)"
-    )
+    if not attempted_providers:
+        logger.warning(
+            "FCM push skipped: no provider configured (set FCM_SERVICE_ACCOUNT_FILE for v1 or FCM_SERVER_KEY for legacy)"
+        )
+    else:
+        logger.warning(
+            "FCM push failed: configured providers failed (%s)",
+            ",".join(attempted_providers),
+        )
     return False
