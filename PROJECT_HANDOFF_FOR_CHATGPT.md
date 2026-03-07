@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-07 (Asia/Tashkent)
+Last updated: 2026-03-07 (Asia/Tashkent, evening sync)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local): `dcf0a91`
+Main branch head (local before this handoff update): `f1df2f7`
 
 ## 0) So'nggi yangilanish (2026-03-07)
 
@@ -41,12 +41,14 @@ Main branch head (local): `dcf0a91`
 - Mobile profil tablarida (`driver` va `passenger`) eng pastiga `Bog'lanish` action tile qo'shildi:
   - `Telegram: @SafarUzSupportBot`
   - Bu tugma profil detail sahifasida emas, aynan pastki `Profil` tab ichida.
+- Legal sahifalardagi support aloqa ham `@SafarUzSupportBot`ga almashtirilgan.
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
   - `backend/alembic/versions/0011_admin_roles_and_status.py`
   - `backend/alembic/versions/0012_admin_audit_logs.py`
   - `backend/alembic/versions/0013_support_tickets_and_telegram_sessions.py` (`revision` ID: `0013_support_tickets`, sababi `alembic_version` maydoni `varchar(32)`)
+  - `backend/alembic/versions/0014_ticket_messages.py`
 - Eslatma: productionda albatta:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`
@@ -70,25 +72,13 @@ Qo'shimcha:
 
 ### 2.1 Git holati
 So'nggi commitlar:
-- `dcf0a91` Fix bcrypt runtime error and enforce password byte limit
-- `bd4d225` release
-- `6313eed` nothing
-- `ee800ac` almost ... ready..
+- `f1df2f7` Add support bot action to bottom of profile tabs
+- `cc06325` Point legal support contacts to SafarUz Telegram bot
+- `d4b3fe7` Implement threaded support tickets with bot close and auto-close
+- `61175ba` Fix Alembic revision id length for 0013 migration
 
-Ishchi daraxtda hozir WIP (commit qilinmagan) fayllar bor:
-- `backend/app/api/deps.py`
-- `mobile/lib/app.dart`
-- `mobile/lib/core/api/endpoints.dart`
-- `mobile/lib/core/widgets/daytime_wave_background.dart`
-- `mobile/lib/core/widgets/neo_shell.dart`
-- `mobile/lib/features/auth/auth_page.dart`
-- `mobile/lib/features/auth/otp_page.dart`
-- `mobile/lib/features/driver/driver_home_page.dart`
-- `mobile/lib/features/passenger/passenger_home_page.dart`
-- `mobile/lib/features/auth/password_login_page.dart` (new)
-- `mobile/lib/features/auth/set_password_page.dart` (new)
-
-Demak hozirgi branch toza emas. Davom ettirishdan oldin shu WIP ni alohida commit qilish kerak.
+Ishchi daraxt holati:
+- Handoff yozilgan paytda `git status` toza (commit qilinmagan WIP yo'q).
 
 ### 2.2 Product nomi
 UI title: `SafarUz`.
@@ -292,7 +282,9 @@ Push yuborish:
 Fayllar:
 - `backend/app/api/support.py`
 - `backend/app/models/support_ticket.py`
+- `backend/app/models/support_ticket_message.py`
 - `backend/app/models/telegram_support_session.py`
+- `backend/app/services/support_tickets.py`
 - `backend/app/services/telegram_support.py`
 
 Endpointlar:
@@ -304,7 +296,14 @@ Telegram bot login oqimi:
 1) `/start`
 2) telefon raqam kiritiadi
 3) parol kiritiladi
-4) tasdiqlangandan keyin yozilgan har bir xabar `support_tickets`ga tushadi
+4) tasdiqlangandan keyin yozilgan har bir xabar ticketga qo'shiladi
+
+Support ticket real oqimi:
+- Bitta user uchun aktiv (`open`/`in_progress`) ticketga xabar append qilinadi.
+- Ticketdagi barcha yozishmalar `support_ticket_messages`da saqlanadi (chat history).
+- User botdan `/close` yoki `Ticketni yopish` yuborsa ticket yopiladi.
+- Support javobidan keyin user 24 soat ichida yozmasa ticket avtomatik yopiladi.
+- User keyin qayta yozsa yangi/ochiq ticket oqimi qayta boshlanadi.
 
 ### 4.12 Legal sahifalar
 Fayllar:
@@ -327,6 +326,7 @@ Endpointlar:
 - `/admin/driver-access` (block/unblock)
 - `/admin/change-password` (POST)
 - `/admin/support-tickets/status` (POST)
+- `/admin/support-tickets/reply` (POST)
 
 Qila oladi:
 - Statistika ko'rish
@@ -337,7 +337,9 @@ Qila oladi:
 - Resource metrics (host/container)
 - Server xatoliklari tab (`journalctl`) orqali service loglaridan `ERROR/Exception/Traceback/...` satrlarini ko'rsatish
 - Admin parolini paneldan o'zgartirish (DB hash + env fallback)
-- Support ticketlarni ko'rish va statusini yangilash (`support`/`superadmin` uchun)
+- Support ticketlarni chat ko'rinishida ochib ko'rish (`support`/`superadmin`)
+- Support javob yuborish (`support`/`superadmin`)
+- Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
 
 ---
 
@@ -356,7 +358,7 @@ Migrations:
 - `0010_admin_credentials.py`
 - `0011_admin_roles_and_status.py`
 - `0012_admin_audit_logs.py`
-- `0013_support_tickets_and_telegram_sessions.py`
+- `0013_support_tickets_and_telegram_sessions.py` (revision id: `0013_support_tickets`)
 - `0014_ticket_messages.py`
 
 Asosiy jadvallar:
@@ -459,7 +461,18 @@ Fayllar:
 
 Hozir light/dark uchun gradient fon, NeoPanel card uslubi bor.
 
-### 6.7 I18n
+### 6.7 Support entry points (mobile)
+Fayllar:
+- `mobile/lib/features/driver/driver_home_page.dart`
+- `mobile/lib/features/passenger/passenger_home_page.dart`
+- `mobile/lib/features/driver/driver_blocked_page.dart`
+
+Hozirgi holat:
+- Driver blocked ekranidagi `Bog'lanish` tugmasi `https://t.me/SafarUzSupportBot`ga ochadi.
+- Driver va Passenger pastki `Profil` tabining eng pastida ham `Bog'lanish` tile bor.
+- Legal sahifalardagi support kontakt ham botga yo'naltirilgan.
+
+### 6.8 I18n
 Fayl: `mobile/lib/core/i18n/strings.dart`
 
 Langlar: `uz`, `ru`, `en`.
@@ -568,8 +581,9 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 
 ## 10) Security va konfiguratsiya risklari (MUHIM)
 
-1. `backend/.env.example` ichida realga o'xshash `DEVSMS_TOKEN` bor.
-   - Darhol tokenni rotate qilish va `.env.example`ni mask qilish kerak.
+1. `backend/.env.example` ichida real tokenlar bor (`DEVSMS_TOKEN`, `TELEGRAM_SUPPORT_BOT_TOKEN`, `TELEGRAM_SUPPORT_CHAT_ID`).
+   - Owner talabi bo'yicha ular saqlanmoqda; ammo public repo uchun xavf yuqori.
+   - Tavsiya: tokenlarni davriy rotate qilish va productionda kamida env vault/secret manager ishlatish.
 
 2. DuckDNS token chatda oshkor qilingan.
    - DuckDNS paneldan tokenni regenerate qilib scriptlarni yangilash kerak.
@@ -577,8 +591,8 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 3. `ADMIN_PASSWORD` default (`admin123`) bo'lib ketishi mumkin.
    - productionda albatta almashtirish kerak.
 
-4. CORS hamma origin uchun ochiq.
-   - productionda frontend domainlar bilan cheklash kerak.
+4. CORS env orqali boshqariladi.
+   - `CORS_ALLOWED_ORIGINS` faqat kerakli domainlar bilan cheklanganini tekshirish kerak.
 
 5. Legacy `/auth/verify-otp` endpoint hali ochiq.
    - yangi password flowga to'liq o'tilgach deprecate qilish kerak.
@@ -601,13 +615,14 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 
 ## 12) Next ChatGPT uchun aniq davom rejasi
 
-1. WIP fayllarni review qilib bitta mantiqiy commitga yig'ish.
+1. `git status`ni tekshirib, yangi o'zgarishlarni mayda commitlarga bo'lib yuritish.
 2. `README.md`ni hozirgi auth/password flowga moslab to'liq yangilash.
-3. `backend/.env.example`dan real tokenni olib tashlash, `***` bilan mask.
+3. Owner talabi: `.env.example` tokenlarini o'chirmaslik.
+   - Buning o'rniga token rotation/checklist va private deployment secret strategy qo'shish.
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan oxirgi migrationlarni (`0011_admin_roles_and_status`gacha) productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0014_ticket_messages`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose
@@ -650,11 +665,12 @@ Kontekst:
 - reset password flow: "Parolni unutdingizmi?" bosilganda avval tasdiqlash oynasi chiqadi
 - Tester aliases: +998, +9981; tester OTP: 2656
 - Mobile base URL default: https://safaruz.duckdns.org
-- WIP fayllar mavjud (git statusga qarab ishlagin)
+- Support bot: @SafarUzSupportBot (legal + profile tab + blocked driver entry points)
+- Support ticketlar: threaded chat + admin reply + user /close + 24h auto-close
 
 Birinchi ish:
 1) `git status` va handoffdagi open issuesni tekshir
-2) README va .env.example ni production-safe holatga keltir
+2) README va deployment doclarni hozirgi flowga moslab yangila
 3) RU i18n encodingni tuzat
 4) O'zgartirishdan keyin release build commandini ber
 
