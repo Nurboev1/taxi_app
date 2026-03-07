@@ -77,18 +77,22 @@
 </head>
 <body>
   <header>
-    <strong>SafarUz Admin</strong>
+    <strong>SafarUz Admin | {{ admin_username }} ({{ admin_role_labels.get(admin_role, admin_role) }})</strong>
     <a class="btn" href="/admin/logout">Chiqish</a>
   </header>
   <div class="wrap">
+    {% if tab_forbidden %}
+      <div class="error">Sizning rolingiz bu bo'limga kira olmaydi.</div>
+    {% endif %}
     <div class="tabs">
-      <a class="tab {% if tab == 'overview' %}active{% endif %}" href="/admin?tab=overview">Dashboard</a>
-      <a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>
-      <a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>
-      <a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>
-      <a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>
-      <a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>
-      <a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>
+      {% if 'overview' in tab_access %}<a class="tab {% if tab == 'overview' %}active{% endif %}" href="/admin?tab=overview">Dashboard</a>{% endif %}
+      {% if 'trips' in tab_access %}<a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>{% endif %}
+      {% if 'users' in tab_access %}<a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>{% endif %}
+      {% if 'driver_access' in tab_access %}<a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>{% endif %}
+      {% if 'resources' in tab_access %}<a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>{% endif %}
+      {% if 'errors' in tab_access %}<a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>{% endif %}
+      {% if 'security' in tab_access %}<a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>{% endif %}
+      {% if 'admin_accounts' in tab_access %}<a class="tab {% if tab == 'admin_accounts' %}active{% endif %}" href="/admin?tab=admin_accounts">Admin accountlar</a>{% endif %}
     </div>
 
     <div class="stats">
@@ -432,6 +436,77 @@
             </div>
             <button type="submit">Parolni yangilash</button>
           </form>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'admin_accounts' %}
+      <section class="card">
+        <h3>Role bilan admin account yaratish</h3>
+        <div class="body">
+          {% if admin_accounts_error %}
+            <div class="error">{{ admin_accounts_error }}</div>
+          {% endif %}
+          {% if admin_accounts_status == 'created' %}
+            <div class="ok">Yangi admin account yaratildi.</div>
+          {% elif admin_accounts_status == 'exists' %}
+            <div class="error">Bu login allaqachon mavjud.</div>
+          {% elif admin_accounts_status == 'invalid_username' %}
+            <div class="error">Login noto'g'ri (3-100 belgi, probelsiz).</div>
+          {% elif admin_accounts_status == 'confirm_mismatch' %}
+            <div class="error">Parol va tasdiq mos emas.</div>
+          {% elif admin_accounts_status == 'invalid_password' %}
+            <div class="error">Parol kamida 8 belgi (maksimal 72 bayt).</div>
+          {% elif admin_accounts_status == 'invalid_role' %}
+            <div class="error">Rol noto'g'ri.</div>
+          {% elif admin_accounts_status == 'db_error' %}
+            <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
+          {% elif admin_accounts_status == 'forbidden' %}
+            <div class="error">Bu amal uchun superadmin huquqi kerak.</div>
+          {% endif %}
+
+          <form method="post" action="/admin/admin-accounts/create">
+            <div class="filters">
+              <label for="new_admin_username"><strong>Login:</strong></label>
+              <input id="new_admin_username" name="username" required />
+            </div>
+            <div class="filters">
+              <label for="new_admin_role"><strong>Rol:</strong></label>
+              <select id="new_admin_role" name="role" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;">
+                <option value="support">Support</option>
+                <option value="ops">Ops</option>
+                <option value="superadmin">Superadmin</option>
+              </select>
+            </div>
+            <div class="filters">
+              <label for="new_admin_password"><strong>Parol:</strong></label>
+              <input id="new_admin_password" name="password" type="password" minlength="8" required />
+            </div>
+            <div class="filters">
+              <label for="new_admin_password_confirm"><strong>Parol (qayta):</strong></label>
+              <input id="new_admin_password_confirm" name="password_confirm" type="password" minlength="8" required />
+            </div>
+            <button type="submit">Account yaratish</button>
+          </form>
+
+          <div class="meta" style="margin-top:16px;">Mavjud admin accountlar:</div>
+          <table>
+            <thead>
+              <tr><th>Login</th><th>Rol</th><th>Faol</th><th>Yaratgan</th><th>Yaratilgan</th><th>Yangilangan</th></tr>
+            </thead>
+            <tbody>
+              {% for a in admin_accounts %}
+                <tr>
+                  <td>{{ a.username }}</td>
+                  <td>{{ admin_role_labels.get(a.role, a.role) }}</td>
+                  <td>{{ a.is_active }}</td>
+                  <td>{{ a.created_by or '-' }}</td>
+                  <td>{{ a.created_at }}</td>
+                  <td>{{ a.updated_at }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </section>
     {% endif %}

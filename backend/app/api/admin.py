@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+from typing import Iterable
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -29,34 +30,93 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 ADMIN_COOKIE = "admin_session"
+ADMIN_ROLE_SUPERADMIN = "superadmin"
+ADMIN_ROLE_SUPPORT = "support"
+ADMIN_ROLE_OPS = "ops"
+ADMIN_ROLES = (ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT, ADMIN_ROLE_OPS)
+ADMIN_ROLE_LABELS = {
+    ADMIN_ROLE_SUPERADMIN: "Superadmin",
+    ADMIN_ROLE_SUPPORT: "Support",
+    ADMIN_ROLE_OPS: "Ops",
+}
+ADMIN_TAB_ACCESS = {
+    ADMIN_ROLE_SUPERADMIN: {
+        "overview",
+        "trips",
+        "users",
+        "driver_access",
+        "resources",
+        "errors",
+        "security",
+        "admin_accounts",
+    },
+    ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security"},
+    ADMIN_ROLE_OPS: {"overview", "resources", "errors", "security"},
+}
 
 
-def _create_admin_token(username: str) -> str:
+def _normalize_admin_role(role: str | None) -> str:
+    value = (role or "").strip().lower()
+    if value not in ADMIN_ROLES:
+        return ADMIN_ROLE_SUPPORT
+    return value
+
+
+def _create_admin_token(username: str, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.admin_token_expire_minutes)
-    payload = {"sub": f"admin:{username}", "exp": expire}
+    payload = {"sub": "admin", "usr": username, "role": _normalize_admin_role(role), "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
-def _verify_admin_token(token: str | None) -> bool:
+def _decode_admin_token(token: str | None) -> dict[str, str] | None:
     if not token:
-        return False
+        return None
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
         sub = str(payload.get("sub", ""))
-        return sub == f"admin:{settings.admin_username}"
+        username = ""
+        role = payload.get("role")
+
+        if sub.startswith("admin:"):
+            # Legacy token support.
+            username = sub.split(":", 1)[1]
+            role = ADMIN_ROLE_SUPERADMIN if username == settings.admin_username else ADMIN_ROLE_SUPPORT
+        elif sub == "admin":
+            username = str(payload.get("usr", "")).strip()
+
+        if not username:
+            return None
+
+        return {
+            "username": username,
+            "role": _normalize_admin_role(str(role or ADMIN_ROLE_SUPPORT)),
+        }
     except JWTError:
+        return None
+
+
+def _get_admin_session(request: Request) -> dict[str, str] | None:
+    return _decode_admin_token(request.cookies.get(ADMIN_COOKIE))
+
+
+def _admin_required(request: Request, allowed_roles: Iterable[str] | None = None) -> bool:
+    session_data = _get_admin_session(request)
+    if not session_data:
         return False
+    if allowed_roles is None:
+        return True
+    return session_data["role"] in set(allowed_roles)
 
 
-def _admin_required(request: Request) -> bool:
-    return _verify_admin_token(request.cookies.get(ADMIN_COOKIE))
+def _can_access_tab(role: str, tab: str) -> bool:
+    return tab in ADMIN_TAB_ACCESS.get(_normalize_admin_role(role), set())
 
 
-def _load_admin_credential(db: Session) -> AdminCredential | None:
+def _load_admin_credential(db: Session, username: str) -> AdminCredential | None:
     try:
         return db.scalar(
             select(AdminCredential).where(
-                AdminCredential.username == settings.admin_username
+                AdminCredential.username == username
             )
         )
     except SQLAlchemyError:
@@ -64,11 +124,13 @@ def _load_admin_credential(db: Session) -> AdminCredential | None:
         return None
 
 
-def _admin_password_matches(db: Session, password: str) -> bool:
-    cred = _load_admin_credential(db)
+def _admin_password_matches(db: Session, username: str, password: str) -> bool:
+    cred = _load_admin_credential(db, username)
     if cred:
+        if not cred.is_active:
+            return False
         return verify_password(password, cred.password_hash)
-    return password == settings.admin_password
+    return username == settings.admin_username and password == settings.admin_password
 
 
 def _validate_admin_new_password(password: str) -> str:
@@ -77,6 +139,15 @@ def _validate_admin_new_password(password: str) -> str:
         raise ValueError("Yangi parol kamida 8 ta belgidan iborat bo'lishi kerak")
     if len(value.encode("utf-8")) > 72:
         raise ValueError("Yangi parol juda uzun. Maksimal 72 bayt")
+    return value
+
+
+def _validate_admin_username(username: str) -> str:
+    value = (username or "").strip()
+    if len(value) < 3 or len(value) > 100:
+        raise ValueError("Login 3-100 oralig'ida bo'lishi kerak")
+    if " " in value:
+        raise ValueError("Login ichida probel bo'lmasin")
     return value
 
 
@@ -289,11 +360,19 @@ def admin_login(
     username: str = Form(...),
     password: str = Form(...),
 ):
+    username = username.strip()
     db: Session = SessionLocal()
     try:
-        login_ok = username == settings.admin_username and _admin_password_matches(
-            db, password
-        )
+        role = ADMIN_ROLE_SUPERADMIN
+        login_ok = _admin_password_matches(db, username, password)
+        if login_ok:
+            cred = _load_admin_credential(db, username)
+            if cred and cred.is_active:
+                role = _normalize_admin_role(cred.role)
+            elif username == settings.admin_username:
+                role = ADMIN_ROLE_SUPERADMIN
+            else:
+                role = ADMIN_ROLE_SUPPORT
     finally:
         db.close()
 
@@ -304,7 +383,7 @@ def admin_login(
             context={"error": "Login yoki parol noto'g'ri"},
         )
 
-    token = _create_admin_token(username)
+    token = _create_admin_token(username, role)
     response = RedirectResponse(url="/admin", status_code=302)
     response.set_cookie(
         key=ADMIN_COOKIE,
@@ -325,12 +404,17 @@ def admin_logout():
 
 @router.get("", response_class=HTMLResponse)
 def admin_dashboard(request: Request):
-    if not _admin_required(request):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
         return RedirectResponse(url="/admin/login", status_code=302)
+    admin_role = admin_session["role"]
+    admin_username = admin_session["username"]
 
     db: Session = SessionLocal()
     try:
-        tab = request.query_params.get("tab", "overview")
+        requested_tab = request.query_params.get("tab", "overview")
+        tab = requested_tab if _can_access_tab(admin_role, requested_tab) else "overview"
+        tab_forbidden = requested_tab != tab
         trip_date_raw = request.query_params.get("trip_date")
         selected_trip_date: date | None = None
         if trip_date_raw:
@@ -343,6 +427,7 @@ def admin_dashboard(request: Request):
         driver_access_user_id_raw = request.query_params.get("driver_access_user_id")
         driver_access_status = request.query_params.get("driver_access_status")
         admin_password_status = request.query_params.get("admin_password_status")
+        admin_accounts_status = request.query_params.get("admin_accounts_status")
         error_service_raw = request.query_params.get("error_service", "safaruz-backend")
         error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
@@ -350,6 +435,8 @@ def admin_dashboard(request: Request):
         lookup_error: str | None = None
         driver_access_user: User | None = None
         driver_access_error: str | None = None
+        admin_accounts: list[AdminCredential] = []
+        admin_accounts_error: str | None = None
         resource_metrics = _collect_resource_metrics()
         try:
             error_lines = int(error_lines_raw)
@@ -570,6 +657,15 @@ def admin_dashboard(request: Request):
                     driver_access_error = "Bunday ID bilan foydalanuvchi topilmadi"
             except ValueError:
                 driver_access_error = "Foydalanuvchi ID raqam bo'lishi kerak"
+
+        if _can_access_tab(admin_role, "admin_accounts"):
+            try:
+                admin_accounts = db.scalars(
+                    select(AdminCredential).order_by(AdminCredential.created_at.desc())
+                ).all()
+            except SQLAlchemyError:
+                admin_accounts = []
+                admin_accounts_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
     finally:
         db.close()
 
@@ -602,10 +698,18 @@ def admin_dashboard(request: Request):
             "driver_access_error": driver_access_error,
             "driver_access_status": driver_access_status or "",
             "admin_password_status": admin_password_status or "",
+            "admin_accounts_status": admin_accounts_status or "",
+            "admin_accounts": admin_accounts,
+            "admin_accounts_error": admin_accounts_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
             "error_service": error_service_raw,
             "error_lines": error_lines,
+            "admin_username": admin_username,
+            "admin_role": admin_role,
+            "admin_role_labels": ADMIN_ROLE_LABELS,
+            "tab_access": ADMIN_TAB_ACCESS.get(admin_role, set()),
+            "tab_forbidden": tab_forbidden,
         },
     )
 
@@ -618,6 +722,11 @@ def admin_driver_access(
 ):
     if not _admin_required(request):
         return RedirectResponse(url="/admin/login", status_code=302)
+    if not _admin_required(request, [ADMIN_ROLE_SUPERADMIN]):
+        return RedirectResponse(
+            url=f"/admin?tab=overview",
+            status_code=302,
+        )
 
     db: Session = SessionLocal()
     try:
@@ -662,8 +771,11 @@ def admin_change_password(
     new_password: str = Form(...),
     new_password_confirm: str = Form(...),
 ):
-    if not _admin_required(request):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
         return RedirectResponse(url="/admin/login", status_code=302)
+    admin_username = admin_session["username"]
+    admin_role = admin_session["role"]
 
     if new_password != new_password_confirm:
         return RedirectResponse(
@@ -681,19 +793,22 @@ def admin_change_password(
 
     db: Session = SessionLocal()
     try:
-        if not _admin_password_matches(db, current_password):
+        if not _admin_password_matches(db, admin_username, current_password):
             return RedirectResponse(
                 url="/admin?tab=security&admin_password_status=wrong_current_password",
                 status_code=302,
             )
 
-        credential = _load_admin_credential(db)
+        credential = _load_admin_credential(db, admin_username)
         now = datetime.now(timezone.utc)
         hashed = hash_password(normalized_new_password)
         if credential is None:
             credential = AdminCredential(
-                username=settings.admin_username,
+                username=admin_username,
                 password_hash=hashed,
+                role=_normalize_admin_role(admin_role),
+                is_active=True,
+                created_by=admin_username,
                 created_at=now,
                 updated_at=now,
             )
@@ -713,5 +828,87 @@ def admin_change_password(
 
     return RedirectResponse(
         url="/admin?tab=security&admin_password_status=changed",
+        status_code=302,
+    )
+
+
+@router.post("/admin-accounts/create")
+def admin_create_account(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+    role: str = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=forbidden",
+            status_code=302,
+        )
+
+    try:
+        normalized_username = _validate_admin_username(username)
+    except ValueError:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=invalid_username",
+            status_code=302,
+        )
+
+    if password != password_confirm:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=confirm_mismatch",
+            status_code=302,
+        )
+
+    try:
+        normalized_password = _validate_admin_new_password(password)
+    except ValueError:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=invalid_password",
+            status_code=302,
+        )
+
+    normalized_role = (role or "").strip().lower()
+    if normalized_role not in ADMIN_ROLES:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=invalid_role",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        existing = _load_admin_credential(db, normalized_username)
+        if existing:
+            return RedirectResponse(
+                url="/admin?tab=admin_accounts&admin_accounts_status=exists",
+                status_code=302,
+            )
+
+        now = datetime.now(timezone.utc)
+        account = AdminCredential(
+            username=normalized_username,
+            password_hash=hash_password(normalized_password),
+            role=normalized_role,
+            is_active=True,
+            created_by=admin_session["username"],
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(account)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=admin_accounts&admin_accounts_status=created",
         status_code=302,
     )

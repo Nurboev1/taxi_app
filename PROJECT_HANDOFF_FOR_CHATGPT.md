@@ -4,6 +4,22 @@ Last updated: 2026-03-07 (Asia/Tashkent)
 Repository: `Nurboev1/taxi_app`
 Main branch head (local): `dcf0a91`
 
+## 0) So'nggi yangilanish (2026-03-07)
+
+- Admin panelga RBAC qo'shildi:
+  - Rollar: `superadmin`, `support`, `ops`
+  - Yangi tab: `Admin accountlar`
+  - Superadmin shu tabdan role bilan yangi admin account yarata oladi
+  - Tablar rolega qarab ko'rinadi (ruxsatsiz tabga kirsa `overview`ga qaytadi)
+- `admin_credentials` modeli kengaydi:
+  - `role`, `is_active`, `created_by` fieldlar qo'shildi
+- Yangi migration:
+  - `backend/alembic/versions/0011_admin_roles_and_status.py`
+- Eslatma: productionda albatta:
+  - `cd /opt/safaruz/backend`
+  - `source .venv/bin/activate`
+  - `python -m alembic upgrade head`
+
 ## 1) Maqsad
 Bu hujjatning maqsadi: boshqa ChatGPT yoki yangi developer shu faylni o'qib, loyihani qayerda to'xtagan bo'lsa, o'sha joydan davom ettira olsin.
 
@@ -529,7 +545,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan `0010_admin_credentials` migrationni productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0011_admin_roles_and_status`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose
