@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
+import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/widgets/neo_shell.dart';
 
 import '../auth/auth_controller.dart';
@@ -19,9 +20,25 @@ class RolePage extends ConsumerWidget {
     return NeoScaffold(
       title: s.t('choose_role'),
       child: ListView(
-        padding: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
         children: [
-          NeoPanel(
+          NeoHeroCard(
+            title: s.t('choose_role'),
+            subtitle: 'Select the mode that matches how you will use SafarUz',
+            icon: Icons.swap_horiz_rounded,
+            badges: [
+              NeoBadge(
+                icon: Icons.local_taxi_outlined,
+                label: s.t('driver'),
+              ),
+              NeoBadge(
+                icon: Icons.person_outline_rounded,
+                label: s.t('passenger'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Card(
             child: Column(
               children: [
                 _RoleCard(
@@ -90,20 +107,34 @@ class _RoleCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: Ink(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.32),
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.42),
+              Theme.of(context).colorScheme.surface,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(icon),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(width: 12),
             Expanded(

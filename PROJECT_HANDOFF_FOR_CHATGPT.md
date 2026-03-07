@@ -630,6 +630,35 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 
 ## 11) Hozirgi ochiq kamchiliklar (tech debt)
 
+## 10.4) 2026-03-07 UI redesign wave
+
+- Main mobile UI bir xil "neo" vizual tilga o'tkazildi:
+  - yangi shared komponentlar: `mobile/lib/core/widgets/neo_sections.dart`
+  - qo'shilgan bloklar: `NeoHeroCard`, `NeoBadge`, `NeoActionCard`, `NeoSectionHeader`, `NeoMetricCard`, `NeoInfoRow`, `NeoEmptyState`
+- Quyidagi sahifalar sezilarli qayta dizayn qilindi:
+  - `mobile/lib/features/passenger/passenger_home_page.dart`
+  - `mobile/lib/features/driver/my_trips_page.dart`
+  - `mobile/lib/features/chat/chats_page.dart`
+  - `mobile/lib/features/chat/chat_page.dart`
+  - `mobile/lib/features/notifications/notifications_page.dart`
+  - `mobile/lib/features/settings/profile_page.dart`
+  - `mobile/lib/features/settings/settings_page.dart`
+  - `mobile/lib/features/settings/profile_setup_page.dart`
+  - `mobile/lib/features/role/role_page.dart`
+- `mobile/lib/features/driver/driver_home_page.dart` allaqachon neo style'ga yaqinlashtirilgan edi; qolgan passenger/settings/chat/trips screens ham shu uslubga keltirildi.
+- Dizayn yo'nalishi:
+  - kattaroq hero headerlar
+  - rangli action cardlar
+  - bo'sh holatlar uchun alohida empty-state bloklar
+  - profil va trip detail joylarda metric/info row pattern
+  - chat composer va message bubblelar tozalandi
+- Verify:
+  - `flutter analyze` redesign qilingan fayllarda toza o'tgan
+  - `dart format` ishlatilgan
+- Eslatma:
+  - `backend/.env.example` user tomonidan dirty; commitga qo'shmaslik kerak
+  - agar keyingi redesign davom etsa, auth page'lar (`auth_page.dart`, `password_login_page.dart`, `otp_page.dart`, `set_password_page.dart`) ham shu neo vizual tizimga ko'chirilishi mumkin
+
 - RU i18n matnlari encoding buzilgan.
 - UIda ba'zi joylarda eski/yarim tayyor auth flow textlari qolgan bo'lishi mumkin.
 - Notification delivery 2 qavatli (polling + push), duplicate risk ayrim edge-caselar bo'lishi mumkin.

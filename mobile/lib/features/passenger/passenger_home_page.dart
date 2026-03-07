@@ -3,13 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/api/api_client.dart';
+import 'package:taxi_mobile/core/api/api_error.dart';
+import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/core/widgets/animated_blobs_background.dart';
 import 'package:taxi_mobile/core/widgets/daytime_wave_background.dart';
 import 'package:taxi_mobile/core/widgets/first_time_tutorial_dialog.dart';
-import 'package:taxi_mobile/core/api/api_error.dart';
+import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
 import 'package:taxi_mobile/features/notifications/notifications_controller.dart';
 
@@ -37,7 +38,9 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
     super.initState();
     Future.microtask(() async {
       await ref.read(passengerActionsProvider).restoreLastRequestId();
-      if (mounted) _maybeShowTutorial();
+      if (mounted) {
+        _maybeShowTutorial();
+      }
     });
   }
 
@@ -95,15 +98,13 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
     final s = AppStrings.of(auth.profile?['language']?.toString());
     final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
 
-    final bg1 = isDark ? const Color(0xFF0F172A) : const Color(0xFFE0F2FE);
-    final bg2 = isDark ? const Color(0xFF111827) : const Color(0xFFF8FAFC);
-
     final pages = <Widget>[
       _PassengerDashboard(s: s),
       _PassengerTripsTab(s: s),
       _PassengerChatTab(s: s),
       _PassengerProfileTab(s: s, isDark: isDark),
     ];
+
     final tabContent = SafeArea(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
@@ -135,7 +136,7 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
       ),
       body: isDark
           ? AnimatedBlobsBackground(
-              colors: [bg1, bg2],
+              colors: const [Color(0xFF0F172A), Color(0xFF111827)],
               child: tabContent,
             )
           : DaytimeWaveBackground(child: tabContent),
@@ -144,21 +145,25 @@ class _PassengerHomePageState extends ConsumerState<PassengerHomePage> {
         onDestinationSelected: (v) => setState(() => _tab = v),
         destinations: [
           NavigationDestination(
-              icon: const Icon(Icons.dashboard_outlined),
-              selectedIcon: const Icon(Icons.dashboard),
-              label: s.t('nav_home')),
+            icon: const Icon(Icons.dashboard_outlined),
+            selectedIcon: const Icon(Icons.dashboard),
+            label: s.t('nav_home'),
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.route_outlined),
-              selectedIcon: const Icon(Icons.route),
-              label: s.t('nav_trips')),
+            icon: const Icon(Icons.route_outlined),
+            selectedIcon: const Icon(Icons.route),
+            label: s.t('nav_trips'),
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.chat_bubble_outline),
-              selectedIcon: const Icon(Icons.chat_bubble),
-              label: s.t('nav_chat')),
+            icon: const Icon(Icons.chat_bubble_outline),
+            selectedIcon: const Icon(Icons.chat_bubble),
+            label: s.t('nav_chat'),
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: s.t('nav_profile')),
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: s.t('nav_profile'),
+          ),
         ],
       ),
     );
@@ -177,67 +182,37 @@ class _PassengerChatTab extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text("Chatni o'chirish"),
         content: const Text(
-            "Ushbu chat ikkala tomon uchun ham butunlay o'chiriladi. Davom etasizmi?"),
+          "Ushbu chat ikkala tomon uchun ham butunlay o'chiriladi. Davom etasizmi?",
+        ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text("Yo'q")),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Yo'q"),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text("Ha, o'chir")),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Ha, o'chir"),
+          ),
         ],
       ),
     );
     if (ok != true) return;
+
     try {
       await ref.read(chatActionsProvider).deleteChat(chatId);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Chat o'chirildi")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Chat o'chirildi")),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(apiErrorMessage(e, fallback: s.t('generic_error')))),
+          content: Text(apiErrorMessage(e, fallback: s.t('generic_error'))),
+        ),
       );
     }
-  }
-
-  Future<void> _openChatMenu(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> c) async {
-    final chatId = c['chat_id'] as int;
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_outline),
-              title: const Text('Suhbatni ochish'),
-              onTap: () {
-                Navigator.pop(ctx);
-                context.push('/chat/$chatId');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text("Chatni o'chirish",
-                  style: TextStyle(color: Colors.red)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _deleteChat(context, ref, chatId);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -249,31 +224,81 @@ class _PassengerChatTab extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                SizedBox(
-                    height: 320, child: Center(child: Text(s.t('no_chats')))),
+                NeoHeroCard(
+                  title: s.t('nav_chat'),
+                  subtitle: s.t('tutorial_passenger_chat_desc'),
+                  icon: Icons.chat_bubble_outline_rounded,
+                ),
+                const SizedBox(height: 24),
+                NeoEmptyState(
+                  icon: Icons.forum_outlined,
+                  title: s.t('no_chats'),
+                  subtitle: s.t('tutorial_passenger_chat_desc'),
+                ),
               ],
             );
           }
+
           return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final c = items[i];
+            itemCount: items.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: NeoHeroCard(
+                    title: s.t('nav_chat'),
+                    subtitle: s.t('tutorial_passenger_chat_desc'),
+                    icon: Icons.chat_bubble_outline_rounded,
+                    badges: [
+                      NeoBadge(
+                        icon: Icons.mark_chat_unread_outlined,
+                        label: '${items.length}',
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final c = items[index - 1];
               final chatId = c['chat_id'] as int;
-              final last = c['last_message']?.toString();
-              return ListTile(
-                leading:
-                    const CircleAvatar(child: Icon(Icons.chat_bubble_outline)),
-                title: Text(c['driver_name']?.toString() ??
-                    c['passenger_name']?.toString() ??
-                    s.t('chat')),
-                subtitle: Text(
-                    (last == null || last.isEmpty) ? s.t('no_message') : last),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/chat/$chatId'),
-                onLongPress: () => _openChatMenu(context, ref, c),
+              final name = c['driver_name']?.toString() ??
+                  c['passenger_name']?.toString() ??
+                  s.t('chat');
+              final last =
+                  (c['last_message']?.toString().trim().isNotEmpty ?? false)
+                      ? c['last_message'].toString().trim()
+                      : s.t('no_message');
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: NeoActionCard(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: name,
+                  subtitle: last,
+                  onTap: () => context.push('/chat/$chatId'),
+                  tint: Theme.of(context).colorScheme.secondary,
+                  trailing: PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    onSelected: (value) async {
+                      if (value == 'open') {
+                        context.push('/chat/$chatId');
+                      } else if (value == 'delete') {
+                        await _deleteChat(context, ref, chatId);
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                          value: 'open', child: Text("Suhbatni ochish")),
+                      PopupMenuItem(
+                          value: 'delete', child: Text("Chatni o'chirish")),
+                    ],
+                  ),
+                ),
               );
             },
           );
@@ -282,15 +307,18 @@ class _PassengerChatTab extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SizedBox(
-                height: 320,
-                child: Center(child: Text(s.t('chats_load_error')))),
+              height: 320,
+              child: Center(child: Text(s.t('chats_load_error'))),
+            ),
           ],
         ),
         loading: () => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(
-                height: 320, child: Center(child: CircularProgressIndicator())),
+              height: 320,
+              child: Center(child: CircularProgressIndicator()),
+            ),
           ],
         ),
       ),
@@ -298,38 +326,55 @@ class _PassengerChatTab extends ConsumerWidget {
   }
 }
 
-class _PassengerDashboard extends StatelessWidget {
+class _PassengerDashboard extends ConsumerWidget {
   const _PassengerDashboard({required this.s});
+
   final AppStrings s;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authControllerProvider);
+    final name =
+        (auth.profile?['first_name']?.toString().trim().isNotEmpty ?? false)
+            ? auth.profile!['first_name'].toString().trim()
+            : s.t('passenger');
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(s.t('home_passenger_banner')),
+        NeoHeroCard(
+          title: '$name, ${s.t('passenger_home')}',
+          subtitle: s.t('home_passenger_banner'),
+          icon: Icons.explore_outlined,
+          badges: [
+            NeoBadge(
+              icon: Icons.add_road_rounded,
+              label: s.t('create_request'),
+            ),
+            NeoBadge(
+              icon: Icons.analytics_outlined,
+              label: s.t('request_status'),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        _ActionTile(
-          icon: Icons.add_road,
+        const SizedBox(height: 14),
+        const NeoSectionHeader(
+          title: 'Passenger Flow',
+          subtitle: 'Create a request, track matching and rate completed trips',
+        ),
+        const SizedBox(height: 10),
+        NeoActionCard(
+          icon: Icons.add_road_rounded,
           title: s.t('create_request'),
           subtitle: s.t('home_passenger_create_request_subtitle'),
           onTap: () => context.push('/passenger/create-request'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.analytics_outlined,
           title: s.t('request_status'),
           subtitle: s.t('home_passenger_request_status_subtitle'),
           onTap: () => context.push('/passenger/request-status'),
+          tint: Theme.of(context).colorScheme.secondary,
         ),
       ],
     );
@@ -338,6 +383,7 @@ class _PassengerDashboard extends StatelessWidget {
 
 class _PassengerTripsTab extends StatelessWidget {
   const _PassengerTripsTab({required this.s});
+
   final AppStrings s;
 
   @override
@@ -345,17 +391,30 @@ class _PassengerTripsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        _ActionTile(
-          icon: Icons.star_outline,
+        NeoHeroCard(
+          title: s.t('nav_trips'),
+          subtitle: s.t('tutorial_passenger_trips_desc'),
+          icon: Icons.route_rounded,
+          badges: [
+            NeoBadge(
+              icon: Icons.star_outline_rounded,
+              label: s.t('rate_trip'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        NeoActionCard(
+          icon: Icons.star_outline_rounded,
           title: s.t('rate_trip'),
           subtitle: s.t('home_passenger_rate_subtitle'),
           onTap: () => context.push('/passenger/rate-trip'),
         ),
-        _ActionTile(
-          icon: Icons.history_toggle_off,
+        NeoActionCard(
+          icon: Icons.history_toggle_off_rounded,
           title: s.t('home_passenger_my_ratings'),
           subtitle: s.t('home_passenger_my_ratings_subtitle'),
           onTap: () => context.push('/passenger/my-ratings'),
+          tint: Theme.of(context).colorScheme.tertiary,
         ),
       ],
     );
@@ -364,6 +423,7 @@ class _PassengerTripsTab extends StatelessWidget {
 
 class _PassengerProfileTab extends ConsumerWidget {
   const _PassengerProfileTab({required this.s, required this.isDark});
+
   final AppStrings s;
   final bool isDark;
 
@@ -377,70 +437,50 @@ class _PassengerProfileTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        _ActionTile(
+        NeoHeroCard(
+          title: s.t('nav_profile'),
+          subtitle: s.t('tutorial_profile_desc'),
+          icon: Icons.account_circle_rounded,
+          badges: [
+            NeoBadge(
+              icon: Icons.notifications_outlined,
+              label: unread > 0 ? '$unread' : s.t('notifications'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        NeoActionCard(
           icon: isDark ? Icons.light_mode : Icons.dark_mode,
           title: isDark ? s.t('theme_light') : s.t('theme_dark'),
           subtitle: s.t('app_theme'),
           onTap: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.notifications_outlined,
           title: s.t('notifications'),
           subtitle: notificationsSubtitle,
           onTap: () => context.push('/notifications'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.person_outline,
           title: s.t('profile'),
           subtitle: s.t('profile_info_subtitle'),
           onTap: () => context.push('/profile'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.settings_outlined,
           title: s.t('settings'),
           subtitle: s.t('settings_manage_subtitle'),
           onTap: () => context.push('/settings'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.support_agent_outlined,
           title: s.t('contact_support'),
           subtitle: 'Telegram: @SafarUzSupportBot',
-          onTap: () => _openSupportBot(),
+          onTap: _openSupportBot,
+          tint: Colors.orange.shade700,
         ),
       ],
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Icon(icon),
-        ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
     );
   }
 }

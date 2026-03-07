@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
+import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/widgets/neo_shell.dart';
 
 import '../auth/auth_controller.dart';
@@ -50,64 +51,6 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
     }
   }
 
-  Future<void> _openChatMenu(Map<String, dynamic> c, AppStrings s) async {
-    final chatId = c['chat_id'] as int;
-    final title = '${c['passenger_name']} - ${c['driver_name']}';
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                title: Text(title),
-                subtitle: Text(
-                    (c['last_message'] ?? s.t('no_message')).toString(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              ListTile(
-                leading: const Icon(Icons.chat_bubble_outline),
-                title: const Text('Suhbatni ochish'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push('/chat/$chatId');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('Ismni nusxalash'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await Clipboard.setData(ClipboardData(text: title));
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Nusxalandi')));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text("Chatni o'chirish",
-                    style: TextStyle(color: Colors.red)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _deleteChat(chatId, s);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(
@@ -123,37 +66,78 @@ class _ChatsPageState extends ConsumerState<ChatsPage> {
           data: (items) {
             if (items.isEmpty) {
               return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  SizedBox(
-                      height: 320, child: Center(child: Text(s.t('no_chats'))))
+                  NeoHeroCard(
+                    title: s.t('chats'),
+                    subtitle: s.t('tutorial_passenger_chat_desc'),
+                    icon: Icons.forum_outlined,
+                  ),
+                  const SizedBox(height: 24),
+                  NeoEmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: s.t('no_chats'),
+                    subtitle: s.t('tutorial_passenger_chat_desc'),
+                  ),
                 ],
               );
             }
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              itemCount: items.length,
+              itemCount: items.length + 1,
               itemBuilder: (context, i) {
-                final c = items[i];
-                return Card(
-                  child: ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    leading: CircleAvatar(
-                      child: Text(
-                        (c['driver_name']?.toString().isNotEmpty ?? false)
-                            ? c['driver_name'].toString()[0].toUpperCase()
-                            : '?',
-                      ),
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: NeoHeroCard(
+                      title: s.t('chats'),
+                      subtitle: s.t('tutorial_passenger_chat_desc'),
+                      icon: Icons.forum_outlined,
+                      badges: [
+                        NeoBadge(
+                          icon: Icons.mark_chat_unread_outlined,
+                          label: '${items.length}',
+                        ),
+                      ],
                     ),
-                    title: Text('${c['passenger_name']} - ${c['driver_name']}'),
-                    subtitle: Text(
+                  );
+                }
+                final c = items[i - 1];
+                final title = '${c['passenger_name']} - ${c['driver_name']}';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: NeoActionCard(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: title,
+                    subtitle:
                         (c['last_message'] ?? s.t('no_message')).toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
                     onTap: () => context.push('/chat/${c['chat_id']}'),
-                    onLongPress: () => _openChatMenu(c, s),
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_horiz_rounded),
+                      onSelected: (value) async {
+                        if (value == 'copy') {
+                          await Clipboard.setData(ClipboardData(text: title));
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Nusxalandi')),
+                          );
+                          return;
+                        }
+                        if (value == 'delete') {
+                          await _deleteChat(c['chat_id'] as int, s);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                            value: 'copy', child: Text('Ismni nusxalash')),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text("Chatni o'chirish"),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

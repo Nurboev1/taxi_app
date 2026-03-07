@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/neo_sections.dart';
+import '../../core/widgets/neo_shell.dart';
 import '../auth/auth_controller.dart';
 import 'chat_controller.dart';
 
@@ -79,31 +81,48 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final chatAsync = ref.watch(chatDataProvider(widget.chatId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: chatAsync.maybeWhen(
-          data: (c) => Text(
-              c['peer_name']?.toString() ?? '${s.t('chat')} #${widget.chatId}'),
-          orElse: () => Text('${s.t('chat')} #${widget.chatId}'),
-        ),
-        actions: [
-          chatAsync.maybeWhen(
-            data: (c) {
-              final phone = c['peer_phone']?.toString();
-              if (phone == null || phone.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return IconButton(
-                onPressed: () => _call(phone),
-                icon: const Icon(Icons.call_outlined),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          )
-        ],
+    return NeoScaffold(
+      title: chatAsync.maybeWhen(
+        data: (c) =>
+            c['peer_name']?.toString() ?? '${s.t('chat')} #${widget.chatId}',
+        orElse: () => '${s.t('chat')} #${widget.chatId}',
       ),
-      body: Column(
+      actions: [
+        chatAsync.maybeWhen(
+          data: (c) {
+            final phone = c['peer_phone']?.toString();
+            if (phone == null || phone.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return IconButton(
+              onPressed: () => _call(phone),
+              icon: const Icon(Icons.call_outlined),
+            );
+          },
+          orElse: () => const SizedBox.shrink(),
+        ),
+      ],
+      child: Column(
         children: [
+          chatAsync.maybeWhen(
+            data: (chat) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: NeoHeroCard(
+                title: chat['peer_name']?.toString() ?? s.t('chat'),
+                subtitle:
+                    chat['peer_phone']?.toString() ?? s.t('write_message'),
+                icon: Icons.forum_outlined,
+                badges: [
+                  NeoBadge(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label:
+                        '${((chat['messages'] as List?) ?? const []).length}',
+                  ),
+                ],
+              ),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -119,8 +138,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
                         SizedBox(
-                            height: 320,
-                            child: Center(child: Text(s.t('messages_empty'))))
+                          height: 320,
+                          child: NeoEmptyState(
+                            icon: Icons.mark_chat_read_outlined,
+                            title: s.t('messages_empty'),
+                            subtitle: s.t('write_message'),
+                          ),
+                        ),
                       ],
                     );
                   }
@@ -135,8 +159,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   return ListView.builder(
                     controller: _scrollCtrl,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
                     itemCount: all.length,
                     itemBuilder: (context, i) {
                       final m = all[i];
@@ -153,39 +176,66 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
                         child: Container(
-                          constraints: const BoxConstraints(maxWidth: 280),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          constraints: const BoxConstraints(maxWidth: 300),
+                          margin: const EdgeInsets.symmetric(vertical: 5),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: isMine
-                                ? theme.colorScheme.primaryContainer
-                                : theme.colorScheme.surfaceContainerHighest,
+                            gradient: LinearGradient(
+                              colors: isMine
+                                  ? [
+                                      theme.colorScheme.primary
+                                          .withValues(alpha: 0.18),
+                                      theme.colorScheme.primaryContainer,
+                                    ]
+                                  : [
+                                      theme.colorScheme.surface,
+                                      theme.colorScheme.surfaceContainerHighest,
+                                    ],
+                            ),
                             borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(14),
-                              topRight: const Radius.circular(14),
-                              bottomLeft: Radius.circular(isMine ? 14 : 4),
-                              bottomRight: Radius.circular(isMine ? 4 : 14),
+                              topLeft: const Radius.circular(18),
+                              topRight: const Radius.circular(18),
+                              bottomLeft: Radius.circular(isMine ? 18 : 6),
+                              bottomRight: Radius.circular(isMine ? 6 : 18),
                             ),
                             border: Border.all(
-                                color:
-                                    theme.dividerColor.withValues(alpha: 0.4)),
+                              color: isMine
+                                  ? theme.colorScheme.primary
+                                      .withValues(alpha: 0.16)
+                                  : theme.dividerColor.withValues(alpha: 0.35),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 14,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: Text(body,
-                                    style: const TextStyle(fontSize: 15)),
+                                child: Text(
+                                  body,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    height: 1.35,
+                                  ),
+                                ),
                               ),
-                              if (hhmm.isNotEmpty)
+                              if (hhmm.isNotEmpty) ...[
+                                const SizedBox(height: 6),
                                 Text(
                                   hhmm,
-                                  style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 11),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
+                              ],
                             ],
                           ),
                         ),
@@ -197,16 +247,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
                     SizedBox(
-                        height: 320,
-                        child: Center(child: Text(s.t('chat_load_error'))))
+                      height: 320,
+                      child: Center(child: Text(s.t('chat_load_error'))),
+                    ),
                   ],
                 ),
                 loading: () => ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: const [
                     SizedBox(
-                        height: 320,
-                        child: Center(child: CircularProgressIndicator()))
+                      height: 320,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   ],
                 ),
               ),
@@ -215,37 +267,53 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrl,
-                      minLines: 1,
-                      maxLines: 4,
-                      decoration:
-                          InputDecoration(hintText: s.t('write_message')),
-                    ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.18),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: () async {
-                      final text = _ctrl.text.trim();
-                      if (text.isEmpty) return;
-                      await ref
-                          .read(chatActionsProvider)
-                          .sendMessage(widget.chatId, text);
-                      _ctrl.clear();
-                      _isNearBottom = true;
-                      ref.invalidate(chatDataProvider(widget.chatId));
-                      _scrollToBottom();
-                    },
-                    icon: const Icon(Icons.send),
-                  )
-                ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ctrl,
+                        minLines: 1,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: s.t('write_message'),
+                          border: InputBorder.none,
+                          isCollapsed: true,
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: () async {
+                        final text = _ctrl.text.trim();
+                        if (text.isEmpty) return;
+                        await ref
+                            .read(chatActionsProvider)
+                            .sendMessage(widget.chatId, text);
+                        _ctrl.clear();
+                        _isNearBottom = true;
+                        ref.invalidate(chatDataProvider(widget.chatId));
+                        _scrollToBottom();
+                      },
+                      icon: const Icon(Icons.send_rounded),
+                    ),
+                  ],
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

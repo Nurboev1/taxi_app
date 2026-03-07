@@ -6,6 +6,7 @@ import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/core/api/endpoints.dart';
 import 'package:taxi_mobile/core/formatters/uz_plate_formatter.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
+import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/widgets/neo_shell.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -189,162 +190,220 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return NeoScaffold(
       title: s.t('settings'),
       child: ListView(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
-          NeoPanel(
-            child: Column(
-              children: [
-                TextField(
-                  controller: _firstName,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(labelText: s.t('first_name')),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _lastName,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(labelText: s.t('last_name')),
-                ),
-                if (isDriver) ...[
-                  const SizedBox(height: 8),
+          NeoHeroCard(
+            title: s.t('settings'),
+            subtitle: s.t('settings_manage_subtitle'),
+            icon: Icons.tune_rounded,
+            badges: [
+              NeoBadge(
+                icon: isDriver
+                    ? Icons.local_taxi_outlined
+                    : Icons.person_outline_rounded,
+                label: isDriver ? s.t('driver') : s.t('passenger'),
+              ),
+              NeoBadge(
+                icon: Icons.language_rounded,
+                label: _language,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const NeoSectionHeader(
+                    title: 'Basic Info',
+                    subtitle: 'Identity, language and visibility settings',
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
-                    controller: _carModel,
-                    decoration: InputDecoration(labelText: s.t('car_model')),
+                    controller: _firstName,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(labelText: s.t('first_name')),
                   ),
                   const SizedBox(height: 8),
                   TextField(
-                    controller: _carNumber,
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: const <TextInputFormatter>[
-                      UzPlateTextInputFormatter()
+                    controller: _lastName,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(labelText: s.t('last_name')),
+                  ),
+                  if (isDriver) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _carModel,
+                      decoration: InputDecoration(labelText: s.t('car_model')),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _carNumber,
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: const <TextInputFormatter>[
+                        UzPlateTextInputFormatter()
+                      ],
+                      decoration: InputDecoration(
+                        labelText: s.t('car_number'),
+                        hintText: '01 A123BC',
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _gender,
+                    decoration: InputDecoration(labelText: s.t('gender')),
+                    items: [
+                      DropdownMenuItem(value: 'male', child: Text(s.t('male'))),
+                      DropdownMenuItem(
+                          value: 'female', child: Text(s.t('female'))),
                     ],
-                    decoration: InputDecoration(
-                      labelText: s.t('car_number'),
-                      hintText: '01 A123BC',
+                    onChanged: (v) => setState(() => _gender = v ?? 'male'),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _language,
+                    decoration: InputDecoration(labelText: s.t('language')),
+                    items: const [
+                      DropdownMenuItem(value: 'uz', child: Text('Uzbek')),
+                      DropdownMenuItem(value: 'ru', child: Text('Russkiy')),
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                    ],
+                    onChanged: (v) => setState(() => _language = v ?? 'uz'),
+                  ),
+                  SwitchListTile(
+                    value: _phoneVisible,
+                    onChanged: (v) => setState(() => _phoneVisible = v),
+                    title: Text(s.t('show_phone')),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (!_validateCarPlateIfNeeded(isDriver)) return;
+                        final normalizedCarNumber =
+                            normalizeUzPlate(_carNumber.text);
+                        await ref
+                            .read(authControllerProvider.notifier)
+                            .updateProfile({
+                          'first_name': _capWords(_firstName.text),
+                          'last_name': _capWords(_lastName.text),
+                          'car_model':
+                              isDriver && _carModel.text.trim().isNotEmpty
+                                  ? _carModel.text.trim()
+                                  : null,
+                          'car_number':
+                              isDriver && normalizedCarNumber.isNotEmpty
+                                  ? normalizedCarNumber
+                                  : null,
+                          'gender': _gender,
+                          'language': _language,
+                          'phone_visible': _phoneVisible,
+                        });
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(s.t('settings_saved'))),
+                        );
+                      },
+                      child: Text(s.t('save')),
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _gender,
-                  decoration: InputDecoration(labelText: s.t('gender')),
-                  items: [
-                    DropdownMenuItem(value: 'male', child: Text(s.t('male'))),
-                    DropdownMenuItem(
-                        value: 'female', child: Text(s.t('female'))),
-                  ],
-                  onChanged: (v) => setState(() => _gender = v ?? 'male'),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _language,
-                  decoration: InputDecoration(labelText: s.t('language')),
-                  items: const [
-                    DropdownMenuItem(value: 'uz', child: Text('Uzbek')),
-                    DropdownMenuItem(value: 'ru', child: Text('Russkiy')),
-                    DropdownMenuItem(value: 'en', child: Text('English')),
-                  ],
-                  onChanged: (v) => setState(() => _language = v ?? 'uz'),
-                ),
-                SwitchListTile(
-                  value: _phoneVisible,
-                  onChanged: (v) => setState(() => _phoneVisible = v),
-                  title: Text(s.t('show_phone')),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!_validateCarPlateIfNeeded(isDriver)) return;
-                    final normalizedCarNumber =
-                        normalizeUzPlate(_carNumber.text);
-                    await ref
-                        .read(authControllerProvider.notifier)
-                        .updateProfile({
-                      'first_name': _capWords(_firstName.text),
-                      'last_name': _capWords(_lastName.text),
-                      'car_model': isDriver && _carModel.text.trim().isNotEmpty
-                          ? _carModel.text.trim()
-                          : null,
-                      'car_number': isDriver && normalizedCarNumber.isNotEmpty
-                          ? normalizedCarNumber
-                          : null,
-                      'gender': _gender,
-                      'language': _language,
-                      'phone_visible': _phoneVisible,
-                    });
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(s.t('settings_saved'))));
-                  },
-                  child: Text(s.t('save')),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () async {
-                    final nextRole = role == 'driver' ? 'passenger' : 'driver';
-                    if (nextRole == 'driver' &&
-                        (_carModel.text.trim().isEmpty ||
-                            _carNumber.text.trim().isEmpty)) {
-                      final filled = await _askDriverCarInfo(s);
-                      if (filled == null) return;
-                      _carModel.text = filled['car_model'] ?? '';
-                      _carNumber.text = filled['car_number'] ?? '';
-                      await ref
-                          .read(authControllerProvider.notifier)
-                          .updateProfile({
-                        'car_model': _carModel.text.trim(),
-                        'car_number': _carNumber.text.trim(),
-                      });
-                    }
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const NeoSectionHeader(
+                    title: 'Role & Documents',
+                    subtitle: 'Switch mode or open legal documents',
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final nextRole =
+                            role == 'driver' ? 'passenger' : 'driver';
+                        if (nextRole == 'driver' &&
+                            (_carModel.text.trim().isEmpty ||
+                                _carNumber.text.trim().isEmpty)) {
+                          final filled = await _askDriverCarInfo(s);
+                          if (filled == null) return;
+                          _carModel.text = filled['car_model'] ?? '';
+                          _carNumber.text = filled['car_number'] ?? '';
+                          await ref
+                              .read(authControllerProvider.notifier)
+                              .updateProfile({
+                            'car_model': _carModel.text.trim(),
+                            'car_number': _carNumber.text.trim(),
+                          });
+                        }
 
-                    if (!_validateCarPlateIfNeeded(nextRole == 'driver')) {
-                      return;
-                    }
-                    final hasCarInfo = _carModel.text.trim().isNotEmpty ||
-                        _carNumber.text.trim().isNotEmpty;
-                    if (hasCarInfo) {
-                      final ok = await _confirmRoleSwitch(s, nextRole);
-                      if (!ok) return;
-                    }
-                    try {
-                      await ref
-                          .read(authControllerProvider.notifier)
-                          .setRole(nextRole);
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      if (apiErrorCode(e) == 'DRIVER_BLOCKED') {
-                        context.go('/driver-blocked');
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(apiErrorMessage(e,
-                              fallback: s.t('generic_error'))),
-                        ),
-                      );
-                      return;
-                    }
-                    if (!context.mounted) return;
-                    context.go(nextRole == 'driver' ? '/driver' : '/passenger');
-                  },
-                  child: Text(role == 'driver'
-                      ? s.t('switch_to_passenger')
-                      : s.t('switch_to_driver')),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: Text(s.t('privacy_policy')),
-                  trailing: const Icon(Icons.open_in_new),
-                  onTap: () => _openLegalDoc('/legal/privacy'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.gavel_outlined),
-                  title: Text(s.t('terms_of_use')),
-                  trailing: const Icon(Icons.open_in_new),
-                  onTap: () => _openLegalDoc('/legal/terms'),
-                ),
-              ],
+                        if (!_validateCarPlateIfNeeded(nextRole == 'driver')) {
+                          return;
+                        }
+                        final hasCarInfo = _carModel.text.trim().isNotEmpty ||
+                            _carNumber.text.trim().isNotEmpty;
+                        if (hasCarInfo) {
+                          final ok = await _confirmRoleSwitch(s, nextRole);
+                          if (!ok) return;
+                        }
+                        try {
+                          await ref
+                              .read(authControllerProvider.notifier)
+                              .setRole(nextRole);
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          if (apiErrorCode(e) == 'DRIVER_BLOCKED') {
+                            context.go('/driver-blocked');
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(apiErrorMessage(
+                                e,
+                                fallback: s.t('generic_error'),
+                              )),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!context.mounted) return;
+                        context.go(
+                          nextRole == 'driver' ? '/driver' : '/passenger',
+                        );
+                      },
+                      child: Text(
+                        role == 'driver'
+                            ? s.t('switch_to_passenger')
+                            : s.t('switch_to_driver'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: Text(s.t('privacy_policy')),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => _openLegalDoc('/legal/privacy'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.gavel_outlined),
+                    title: Text(s.t('terms_of_use')),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: () => _openLegalDoc('/legal/terms'),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

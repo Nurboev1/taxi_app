@@ -9,6 +9,7 @@ import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/core/widgets/animated_blobs_background.dart';
 import 'package:taxi_mobile/core/widgets/daytime_wave_background.dart';
 import 'package:taxi_mobile/core/widgets/first_time_tutorial_dialog.dart';
+import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
 import 'package:taxi_mobile/features/driver/driver_blocked_page.dart';
@@ -249,31 +250,64 @@ class _DriverChatTab extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                SizedBox(
-                    height: 320, child: Center(child: Text(s.t('no_chats')))),
+                const SizedBox(height: 24),
+                NeoEmptyState(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: s.t('no_chats'),
+                  subtitle: s.t('tutorial_driver_chat_desc'),
+                ),
               ],
             );
           }
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             itemCount: items.length,
             itemBuilder: (context, i) {
               final c = items[i];
               final chatId = c['chat_id'] as int;
               final last = c['last_message']?.toString();
-              return ListTile(
-                leading:
-                    const CircleAvatar(child: Icon(Icons.chat_bubble_outline)),
-                title: Text(c['passenger_name']?.toString() ??
-                    c['driver_name']?.toString() ??
-                    s.t('chat')),
-                subtitle: Text(
-                    (last == null || last.isEmpty) ? s.t('no_message') : last),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/chat/$chatId'),
-                onLongPress: () => _openChatMenu(context, ref, c),
+              return Card(
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.chat_bubble_outline_rounded),
+                  ),
+                  title: Text(c['passenger_name']?.toString() ??
+                      c['driver_name']?.toString() ??
+                      s.t('chat')),
+                  subtitle: Text(
+                      (last == null || last.isEmpty) ? s.t('no_message') : last,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  trailing: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.66),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.chevron_right_rounded),
+                  ),
+                  onTap: () => context.push('/chat/$chatId'),
+                  onLongPress: () => _openChatMenu(context, ref, c),
+                ),
               );
             },
           );
@@ -307,29 +341,40 @@ class _DriverDashboard extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(s.t('home_driver_banner')),
+        NeoHeroCard(
+          title: s.t('driver_home'),
+          subtitle: s.t('home_driver_banner'),
+          icon: Icons.local_taxi_rounded,
+          badges: [
+            NeoBadge(
+              icon: Icons.add_circle_outline_rounded,
+              label: s.t('create_trip_ad'),
+            ),
+            NeoBadge(
+              icon: Icons.groups_2_outlined,
+              label: s.t('browse_requests'),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        _ActionTile(
+        const NeoSectionHeader(
+          title: 'Driver Flow',
+          subtitle: 'Posting, matching and managing active trips',
+        ),
+        const SizedBox(height: 10),
+        NeoActionCard(
           icon: Icons.add_circle_outline,
           title: s.t('create_trip_ad'),
           subtitle: s.t('home_driver_create_trip_subtitle'),
           onTap: () => context.push('/driver/create-trip'),
+          tint: Theme.of(context).colorScheme.primary,
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.groups_2_outlined,
           title: s.t('browse_requests'),
           subtitle: s.t('home_driver_browse_requests_subtitle'),
           onTap: () => context.push('/driver/open-requests'),
+          tint: Theme.of(context).colorScheme.secondary,
         ),
       ],
     );
@@ -345,13 +390,22 @@ class _DriverTripsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        _ActionTile(
+        NeoHeroCard(
+          title: s.t('nav_trips'),
+          subtitle: s.t('home_driver_my_trips_subtitle'),
+          icon: Icons.route_rounded,
+          badges: [
+            NeoBadge(icon: Icons.star_outline_rounded, label: s.t('home_driver_my_ratings')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        NeoActionCard(
           icon: Icons.route_outlined,
           title: s.t('my_trips'),
           subtitle: s.t('home_driver_my_trips_subtitle'),
           onTap: () => context.push('/driver/my-trips'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.star_outline,
           title: s.t('home_driver_my_ratings'),
           subtitle: s.t('home_driver_my_ratings_subtitle'),
@@ -377,70 +431,50 @@ class _DriverProfileTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        _ActionTile(
+        NeoHeroCard(
+          title: s.t('nav_profile'),
+          subtitle: s.t('tutorial_profile_desc'),
+          icon: Icons.account_circle_rounded,
+          badges: [
+            NeoBadge(
+              icon: Icons.notifications_outlined,
+              label: unread > 0 ? '$unread' : s.t('notifications'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        NeoActionCard(
           icon: isDark ? Icons.light_mode : Icons.dark_mode,
           title: isDark ? s.t('theme_light') : s.t('theme_dark'),
           subtitle: s.t('app_theme'),
           onTap: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.notifications_outlined,
           title: s.t('notifications'),
           subtitle: notificationsSubtitle,
           onTap: () => context.push('/notifications'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.person_outline,
           title: s.t('profile'),
           subtitle: s.t('profile_info_subtitle'),
           onTap: () => context.push('/profile'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.settings_outlined,
           title: s.t('settings'),
           subtitle: s.t('settings_manage_subtitle'),
           onTap: () => context.push('/settings'),
         ),
-        _ActionTile(
+        NeoActionCard(
           icon: Icons.support_agent_outlined,
           title: s.t('contact_support'),
           subtitle: 'Telegram: @SafarUzSupportBot',
           onTap: () => _openSupportBot(),
+          tint: Colors.orange.shade700,
         ),
       ],
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Icon(icon),
-        ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
     );
   }
 }

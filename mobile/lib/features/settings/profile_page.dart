@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/widgets/neo_sections.dart';
+import '../../core/widgets/neo_shell.dart';
 import '../../core/widgets/rating_badge.dart';
 import '../auth/auth_controller.dart';
 
@@ -19,34 +21,106 @@ class ProfilePage extends ConsumerWidget {
     final role = (auth.role ?? 'passenger') == 'driver'
         ? s.t('driver')
         : s.t('passenger');
+    final fullName =
+        '${p['first_name'] ?? ''} ${p['last_name'] ?? ''}'.trim().trim();
 
-    return Scaffold(
-      appBar: AppBar(title: Text(s.t('profile'))),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return NeoScaffold(
+      title: s.t('profile'),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
+          NeoHeroCard(
+            title: fullName.isEmpty ? s.t('profile') : fullName,
+            subtitle: '${s.t('phone')}: ${p['phone'] ?? '-'}',
+            icon: Icons.account_circle_rounded,
+            badges: [
+              NeoBadge(icon: Icons.badge_outlined, label: role),
+              NeoBadge(
+                icon: Icons.language_rounded,
+                label: p['language']?.toString() ?? 'uz',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: NeoMetricCard(
+                  label: s.t('gender'),
+                  value: p['gender']?.toString() ?? '-',
+                  icon: Icons.wc_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: NeoMetricCard(
+                  label: s.t('phone'),
+                  value: p['phone_visible'] == true ? 'ON' : 'OFF',
+                  icon: Icons.phone_outlined,
+                  tint: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                      '${p['first_name'] ?? ''} ${p['last_name'] ?? ''}'.trim(),
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text('${s.t('phone')}: ${p['phone'] ?? '-'}'),
-                  Text('${s.t('gender')}: ${p['gender'] ?? '-'}'),
-                  Text('${s.t('language')}: ${p['language'] ?? 'uz'}'),
-                  Text('Rol: $role'),
+                  NeoSectionHeader(
+                    title: s.t('profile'),
+                    subtitle: s.t('profile_info_subtitle'),
+                  ),
+                  const SizedBox(height: 12),
+                  NeoInfoRow(
+                    label: s.t('first_name'),
+                    value: p['first_name']?.toString().isNotEmpty == true
+                        ? p['first_name'].toString()
+                        : '-',
+                    icon: Icons.person_outline,
+                  ),
+                  NeoInfoRow(
+                    label: s.t('last_name'),
+                    value: p['last_name']?.toString().isNotEmpty == true
+                        ? p['last_name'].toString()
+                        : '-',
+                    icon: Icons.person_pin_outlined,
+                  ),
+                  NeoInfoRow(
+                    label: s.t('phone'),
+                    value: p['phone']?.toString() ?? '-',
+                    icon: Icons.phone_outlined,
+                  ),
+                  NeoInfoRow(
+                    label: s.t('language'),
+                    value: p['language']?.toString() ?? 'uz',
+                    icon: Icons.language_rounded,
+                  ),
                   if ((auth.role ?? '') == 'driver') ...[
-                    Text('${s.t('car_model')}: ${p['car_model'] ?? '-'}'),
-                    Text('${s.t('car_number')}: ${p['car_number'] ?? '-'}'),
-                    const SizedBox(height: 10),
+                    const Divider(height: 24),
+                    NeoInfoRow(
+                      label: s.t('car_model'),
+                      value: p['car_model']?.toString().isNotEmpty == true
+                          ? p['car_model'].toString()
+                          : '-',
+                      icon: Icons.directions_car_outlined,
+                    ),
+                    NeoInfoRow(
+                      label: s.t('car_number'),
+                      value: p['car_number']?.toString().isNotEmpty == true
+                          ? p['car_number'].toString()
+                          : '-',
+                      icon: Icons.pin_outlined,
+                    ),
+                    const SizedBox(height: 8),
                     FutureBuilder<Map<String, dynamic>>(
                       future: () async {
                         final id = auth.userId;
-                        if (id == null) return {'average': 0.0, 'total': 0};
+                        if (id == null) {
+                          return {'average': 0.0, 'total': 0};
+                        }
                         final res = await ref
                             .read(apiClientProvider)
                             .get(Endpoints.ratingSummary(id));
@@ -58,12 +132,10 @@ class ProfilePage extends ConsumerWidget {
                                 0;
                         final total =
                             (snapshot.data?['total'] as num?)?.toInt() ?? 0;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        return Row(
                           children: [
-                            const SizedBox(height: 4),
                             RatingBadge(rating: avg),
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 12),
                             Text('Baholar soni: $total'),
                           ],
                         );
@@ -74,12 +146,14 @@ class ProfilePage extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: () => context.push('/settings'),
-            child: Text(s.t('edit')),
+          const SizedBox(height: 12),
+          NeoActionCard(
+            icon: Icons.edit_outlined,
+            title: s.t('edit'),
+            subtitle: s.t('settings_manage_subtitle'),
+            onTap: () => context.push('/settings'),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -111,7 +185,7 @@ class ProfilePage extends ConsumerWidget {
                 await ref.read(authControllerProvider.notifier).logout();
                 if (context.mounted) context.go('/auth');
               },
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout_rounded),
               label: const Text('Chiqish'),
             ),
           ),
