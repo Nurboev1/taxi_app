@@ -11,10 +11,18 @@ Main branch head (local): `dcf0a91`
   - Yangi tab: `Admin accountlar`
   - Superadmin shu tabdan role bilan yangi admin account yarata oladi
   - Tablar rolega qarab ko'rinadi (ruxsatsiz tabga kirsa `overview`ga qaytadi)
+- Admin account boshqaruvi kengaydi:
+  - `activate/deactivate`
+  - admin account parolini reset qilish
+  - audit log (`admin_audit_logs`) ko'rinishi
+- Xavfsizlik yangilandi:
+  - Auth endpointlarga process-level rate-limit qo'shildi (`request-otp`, `complete-otp`, `login-password`, `verify-otp`)
+  - CORS `*`dan env-based aniq ro'yxatga o'tdi (`CORS_ALLOWED_ORIGINS`)
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
   - `backend/alembic/versions/0011_admin_roles_and_status.py`
+  - `backend/alembic/versions/0012_admin_audit_logs.py`
 - Eslatma: productionda albatta:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`

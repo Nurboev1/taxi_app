@@ -463,6 +463,22 @@
             <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
           {% elif admin_accounts_status == 'forbidden' %}
             <div class="error">Bu amal uchun superadmin huquqi kerak.</div>
+          {% elif admin_accounts_status == 'toggle_active' %}
+            <div class="ok">Admin account faol holatga o'tkazildi.</div>
+          {% elif admin_accounts_status == 'toggle_inactive' %}
+            <div class="ok">Admin account nofaol holatga o'tkazildi.</div>
+          {% elif admin_accounts_status == 'toggle_not_found' %}
+            <div class="error">Admin account topilmadi.</div>
+          {% elif admin_accounts_status == 'toggle_self_forbidden' %}
+            <div class="error">O'zingizning accountingizni nofaol qilib bo'lmaydi.</div>
+          {% elif admin_accounts_status == 'reset_ok' %}
+            <div class="ok">Admin paroli reset qilindi.</div>
+          {% elif admin_accounts_status == 'reset_not_found' %}
+            <div class="error">Parol reset uchun account topilmadi.</div>
+          {% elif admin_accounts_status == 'reset_confirm_mismatch' %}
+            <div class="error">Reset paroli va tasdiq mos emas.</div>
+          {% elif admin_accounts_status == 'reset_invalid_password' %}
+            <div class="error">Yangi parol kamida 8 belgi (maks 72 bayt) bo'lishi kerak.</div>
           {% endif %}
 
           <form method="post" action="/admin/admin-accounts/create">
@@ -492,7 +508,7 @@
           <div class="meta" style="margin-top:16px;">Mavjud admin accountlar:</div>
           <table>
             <thead>
-              <tr><th>Login</th><th>Rol</th><th>Faol</th><th>Yaratgan</th><th>Yaratilgan</th><th>Yangilangan</th></tr>
+              <tr><th>Login</th><th>Rol</th><th>Faol</th><th>Yaratgan</th><th>Yaratilgan</th><th>Yangilangan</th><th>Amal</th></tr>
             </thead>
             <tbody>
               {% for a in admin_accounts %}
@@ -503,6 +519,51 @@
                   <td>{{ a.created_by or '-' }}</td>
                   <td>{{ a.created_at }}</td>
                   <td>{{ a.updated_at }}</td>
+                  <td>
+                    <form method="post" action="/admin/admin-accounts/toggle-active">
+                      <input type="hidden" name="username" value="{{ a.username }}" />
+                      {% if a.is_active %}
+                        <button type="submit" style="background:#b91c1c;border-color:#b91c1c;">Deactivate</button>
+                      {% else %}
+                        <button type="submit">Activate</button>
+                      {% endif %}
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="meta" style="margin-top:16px;">Admin parolini reset qilish:</div>
+          <form method="post" action="/admin/admin-accounts/reset-password">
+            <div class="filters">
+              <label for="reset_admin_username"><strong>Login:</strong></label>
+              <input id="reset_admin_username" name="username" required />
+            </div>
+            <div class="filters">
+              <label for="reset_admin_password"><strong>Yangi parol:</strong></label>
+              <input id="reset_admin_password" name="new_password" type="password" minlength="8" required />
+            </div>
+            <div class="filters">
+              <label for="reset_admin_password_confirm"><strong>Yangi parol (qayta):</strong></label>
+              <input id="reset_admin_password_confirm" name="new_password_confirm" type="password" minlength="8" required />
+            </div>
+            <button type="submit">Parolni reset qilish</button>
+          </form>
+
+          <div class="meta" style="margin-top:16px;">Admin audit log (oxirgi 120):</div>
+          <table>
+            <thead>
+              <tr><th>Vaqt</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+              {% for row in admin_audit_logs %}
+                <tr>
+                  <td>{{ row.created_at }}</td>
+                  <td>{{ row.actor_username }}</td>
+                  <td>{{ row.action }}</td>
+                  <td>{{ row.target_username or '-' }}</td>
+                  <td>{{ row.details or '-' }}</td>
                 </tr>
               {% endfor %}
             </tbody>

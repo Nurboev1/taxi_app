@@ -14,10 +14,13 @@ from app.core.settings import settings
 
 app = FastAPI(title=settings.app_name)
 
+cors_origins = settings.cors_origins()
+allow_all_origins = "*" in cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else cors_origins,
+    allow_credentials=False if allow_all_origins else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

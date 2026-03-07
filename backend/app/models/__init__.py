@@ -1,4 +1,5 @@
-﻿from app.models.admin_credential import AdminCredential
+from app.models.admin_audit_log import AdminAuditLog
+from app.models.admin_credential import AdminCredential
 from app.models.chat import Chat, ChatMessage
 from app.models.claim import RequestClaim
 from app.models.enums import AppLanguage, ClaimStatus, Gender, RequestStatus, TripStatus, UserRole
@@ -10,6 +11,7 @@ from app.models.trip import DriverTrip
 from app.models.user import User
 
 __all__ = [
+    "AdminAuditLog",
     "AdminCredential",
     "Chat",
     "ChatMessage",

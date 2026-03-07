@@ -3,11 +3,12 @@ import random
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import delete, desc, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.rate_limit import hit_rate_limit
 from app.core.security import create_access_token, hash_password, verify_password
 from app.core.settings import settings
 from app.db.session import get_db
@@ -88,6 +89,24 @@ def _validate_password(password: str) -> str:
     return normalized
 
 
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "").strip()
+    if fwd:
+        return fwd.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _enforce_rate_limit(key: str, limit: int, window_seconds: int) -> None:
+    wait_seconds = hit_rate_limit(key=key, limit=limit, window_seconds=window_seconds)
+    if wait_seconds > 0:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Juda ko'p urinish. {wait_seconds} soniyadan keyin qayta urinib ko'ring",
+        )
+
+
 @router.post("/phone-status", response_model=PhoneStatusOut)
 def phone_status(payload: PhoneIn, db: Session = Depends(get_db)):
     phone, _ = _resolve_phone(payload.phone)
@@ -100,8 +119,19 @@ def phone_status(payload: PhoneIn, db: Session = Depends(get_db)):
 
 
 @router.post("/request-otp", response_model=MessageOut)
-def request_otp(payload: RequestOtpIn, db: Session = Depends(get_db)):
+def request_otp(request: Request, payload: RequestOtpIn, db: Session = Depends(get_db)):
     phone, is_tester = _resolve_phone(payload.phone)
+    ip = _client_ip(request)
+    _enforce_rate_limit(
+        key=f"auth:request_otp:ip:{ip}",
+        limit=settings.auth_rate_request_otp_per_ip,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
+    _enforce_rate_limit(
+        key=f"auth:request_otp:phone:{phone}",
+        limit=settings.auth_rate_request_otp_per_phone,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
     now = datetime.now(timezone.utc)
     user = db.scalar(select(User).where(User.phone == phone))
 
@@ -152,8 +182,19 @@ def request_otp(payload: RequestOtpIn, db: Session = Depends(get_db)):
 
 
 @router.post("/complete-otp", response_model=VerifyOtpOut)
-def complete_otp(payload: OtpPasswordCompleteIn, db: Session = Depends(get_db)):
+def complete_otp(request: Request, payload: OtpPasswordCompleteIn, db: Session = Depends(get_db)):
     phone, _ = _resolve_phone(payload.phone)
+    ip = _client_ip(request)
+    _enforce_rate_limit(
+        key=f"auth:complete_otp:ip:{ip}",
+        limit=settings.auth_rate_complete_otp_per_ip,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
+    _enforce_rate_limit(
+        key=f"auth:complete_otp:phone:{phone}",
+        limit=settings.auth_rate_complete_otp_per_phone,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
     _ensure_otp_valid(db, phone, payload.otp)
 
     user = db.scalar(select(User).where(User.phone == phone))
@@ -179,8 +220,19 @@ def complete_otp(payload: OtpPasswordCompleteIn, db: Session = Depends(get_db)):
 
 
 @router.post("/login-password", response_model=VerifyOtpOut)
-def login_password(payload: PasswordLoginIn, db: Session = Depends(get_db)):
+def login_password(request: Request, payload: PasswordLoginIn, db: Session = Depends(get_db)):
     phone, _ = _resolve_phone(payload.phone)
+    ip = _client_ip(request)
+    _enforce_rate_limit(
+        key=f"auth:login_password:ip:{ip}",
+        limit=settings.auth_rate_login_password_per_ip,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
+    _enforce_rate_limit(
+        key=f"auth:login_password:phone:{phone}",
+        limit=settings.auth_rate_login_password_per_phone,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
     user = db.scalar(select(User).where(User.phone == phone))
     if not user or not user.password_hash:
         raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi yoki parol o'rnatilmagan")
@@ -193,8 +245,19 @@ def login_password(payload: PasswordLoginIn, db: Session = Depends(get_db)):
 
 
 @router.post("/verify-otp", response_model=VerifyOtpOut)
-def verify_otp(payload: VerifyOtpIn, db: Session = Depends(get_db)):
+def verify_otp(request: Request, payload: VerifyOtpIn, db: Session = Depends(get_db)):
     phone, _ = _resolve_phone(payload.phone)
+    ip = _client_ip(request)
+    _enforce_rate_limit(
+        key=f"auth:verify_otp:ip:{ip}",
+        limit=settings.auth_rate_complete_otp_per_ip,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
+    _enforce_rate_limit(
+        key=f"auth:verify_otp:phone:{phone}",
+        limit=settings.auth_rate_complete_otp_per_phone,
+        window_seconds=settings.auth_rate_window_seconds,
+    )
     _ensure_otp_valid(db, phone, payload.otp)
 
     user = db.scalar(select(User).where(User.phone == phone))

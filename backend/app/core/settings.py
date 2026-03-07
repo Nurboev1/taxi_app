@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
     admin_password: str = "admin123"
     admin_token_expire_minutes: int = 60 * 12
+    cors_allowed_origins: str = "https://safaruz.duckdns.org,http://localhost:3000,http://127.0.0.1:3000"
     fcm_server_key: str = ""
     fcm_project_id: str = ""
     fcm_service_account_file: str = ""
@@ -20,8 +21,21 @@ class Settings(BaseSettings):
     devsms_token: str = ""
     devsms_from: str = "4546"
     devsms_timeout_seconds: int = 10
+    auth_rate_window_seconds: int = 600
+    auth_rate_request_otp_per_ip: int = 30
+    auth_rate_request_otp_per_phone: int = 5
+    auth_rate_complete_otp_per_ip: int = 60
+    auth_rate_complete_otp_per_phone: int = 20
+    auth_rate_login_password_per_ip: int = 60
+    auth_rate_login_password_per_phone: int = 12
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    def cors_origins(self) -> list[str]:
+        raw = (self.cors_allowed_origins or "").strip()
+        if not raw:
+            return []
+        return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 settings = Settings()

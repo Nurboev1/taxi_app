@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.security import ALGORITHM, hash_password, verify_password
 from app.core.settings import settings
 from app.db.session import SessionLocal
+from app.models.admin_audit_log import AdminAuditLog
 from app.models.admin_credential import AdminCredential
 from app.models.chat import Chat, ChatMessage
 from app.models.claim import RequestClaim
@@ -149,6 +150,24 @@ def _validate_admin_username(username: str) -> str:
     if " " in value:
         raise ValueError("Login ichida probel bo'lmasin")
     return value
+
+
+def _write_admin_audit_log(
+    db: Session,
+    actor_username: str,
+    action: str,
+    target_username: str | None = None,
+    details: str | None = None,
+) -> None:
+    db.add(
+        AdminAuditLog(
+            actor_username=actor_username,
+            action=action,
+            target_username=target_username,
+            details=details,
+            created_at=datetime.now(timezone.utc),
+        )
+    )
 
 
 def _collect_resource_metrics() -> dict[str, object]:
@@ -437,6 +456,7 @@ def admin_dashboard(request: Request):
         driver_access_error: str | None = None
         admin_accounts: list[AdminCredential] = []
         admin_accounts_error: str | None = None
+        admin_audit_logs: list[AdminAuditLog] = []
         resource_metrics = _collect_resource_metrics()
         try:
             error_lines = int(error_lines_raw)
@@ -663,8 +683,12 @@ def admin_dashboard(request: Request):
                 admin_accounts = db.scalars(
                     select(AdminCredential).order_by(AdminCredential.created_at.desc())
                 ).all()
+                admin_audit_logs = db.scalars(
+                    select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(120)
+                ).all()
             except SQLAlchemyError:
                 admin_accounts = []
+                admin_audit_logs = []
                 admin_accounts_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
     finally:
         db.close()
@@ -701,6 +725,7 @@ def admin_dashboard(request: Request):
             "admin_accounts_status": admin_accounts_status or "",
             "admin_accounts": admin_accounts,
             "admin_accounts_error": admin_accounts_error,
+            "admin_audit_logs": admin_audit_logs,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
             "error_service": error_service_raw,
@@ -720,9 +745,10 @@ def admin_driver_access(
     user_id: int = Form(...),
     action: str = Form(...),
 ):
-    if not _admin_required(request):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
         return RedirectResponse(url="/admin/login", status_code=302)
-    if not _admin_required(request, [ADMIN_ROLE_SUPERADMIN]):
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
         return RedirectResponse(
             url=f"/admin?tab=overview",
             status_code=302,
@@ -754,6 +780,13 @@ def admin_driver_access(
         else:
             status = "bad_action"
         db.add(user)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action=f"driver_access_{status}",
+            target_username=str(user.id),
+            details=f"user_id={user.id}",
+        )
         db.commit()
     finally:
         db.close()
@@ -816,6 +849,12 @@ def admin_change_password(
             credential.password_hash = hashed
             credential.updated_at = now
         db.add(credential)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_username,
+            action="admin_password_changed",
+            target_username=admin_username,
+        )
         db.commit()
     except SQLAlchemyError:
         db.rollback()
@@ -898,6 +937,13 @@ def admin_create_account(
             updated_at=now,
         )
         db.add(account)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action="admin_account_created",
+            target_username=normalized_username,
+            details=f"role={normalized_role}",
+        )
         db.commit()
     except SQLAlchemyError:
         db.rollback()
@@ -910,5 +956,126 @@ def admin_create_account(
 
     return RedirectResponse(
         url="/admin?tab=admin_accounts&admin_accounts_status=created",
+        status_code=302,
+    )
+
+
+@router.post("/admin-accounts/toggle-active")
+def admin_toggle_account_active(
+    request: Request,
+    username: str = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=forbidden",
+            status_code=302,
+        )
+
+    normalized_username = (username or "").strip()
+    db: Session = SessionLocal()
+    try:
+        account = _load_admin_credential(db, normalized_username)
+        if not account:
+            return RedirectResponse(
+                url="/admin?tab=admin_accounts&admin_accounts_status=toggle_not_found",
+                status_code=302,
+            )
+
+        if normalized_username == admin_session["username"] and account.is_active:
+            return RedirectResponse(
+                url="/admin?tab=admin_accounts&admin_accounts_status=toggle_self_forbidden",
+                status_code=302,
+            )
+
+        account.is_active = not account.is_active
+        account.updated_at = datetime.now(timezone.utc)
+        db.add(account)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action="admin_account_toggled",
+            target_username=normalized_username,
+            details=f"is_active={account.is_active}",
+        )
+        db.commit()
+        status = "toggle_active" if account.is_active else "toggle_inactive"
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url=f"/admin?tab=admin_accounts&admin_accounts_status={status}",
+        status_code=302,
+    )
+
+
+@router.post("/admin-accounts/reset-password")
+def admin_reset_account_password(
+    request: Request,
+    username: str = Form(...),
+    new_password: str = Form(...),
+    new_password_confirm: str = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=forbidden",
+            status_code=302,
+        )
+
+    normalized_username = (username or "").strip()
+    if new_password != new_password_confirm:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=reset_confirm_mismatch",
+            status_code=302,
+        )
+    try:
+        normalized_password = _validate_admin_new_password(new_password)
+    except ValueError:
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=reset_invalid_password",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        account = _load_admin_credential(db, normalized_username)
+        if not account:
+            return RedirectResponse(
+                url="/admin?tab=admin_accounts&admin_accounts_status=reset_not_found",
+                status_code=302,
+            )
+
+        account.password_hash = hash_password(normalized_password)
+        account.updated_at = datetime.now(timezone.utc)
+        db.add(account)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action="admin_account_password_reset",
+            target_username=normalized_username,
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=admin_accounts&admin_accounts_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=admin_accounts&admin_accounts_status=reset_ok",
         status_code=302,
     )
