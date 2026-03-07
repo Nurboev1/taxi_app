@@ -18,11 +18,12 @@ from app.db.session import SessionLocal
 from app.models.admin_credential import AdminCredential
 from app.models.chat import Chat, ChatMessage
 from app.models.claim import RequestClaim
+from app.models.notification import UserNotification
 from app.models.rating import TripRating
 from app.models.request import PassengerRequest
 from app.models.trip import DriverTrip
 from app.models.user import User
-from app.models.enums import ClaimStatus, UserRole
+from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
@@ -345,7 +346,7 @@ def admin_dashboard(request: Request):
         error_service_raw = request.query_params.get("error_service", "safaruz-backend")
         error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
-        lookup_user_stats: dict[str, int] | None = None
+        lookup_user_stats: dict[str, object] | None = None
         lookup_error: str | None = None
         driver_access_user: User | None = None
         driver_access_error: str | None = None
@@ -422,15 +423,138 @@ def admin_dashboard(request: Request):
                 lookup_id = int(lookup_user_id_raw)
                 lookup_user = db.scalar(select(User).where(User.id == lookup_id))
                 if lookup_user:
+                    avg_given = db.scalar(
+                        select(func.avg(TripRating.stars)).where(
+                            TripRating.passenger_id == lookup_user.id
+                        )
+                    )
+                    avg_received = db.scalar(
+                        select(func.avg(TripRating.stars)).where(
+                            TripRating.driver_id == lookup_user.id
+                        )
+                    )
                     lookup_user_stats = {
-                        "driver_trips": db.scalar(select(func.count(DriverTrip.id)).where(DriverTrip.driver_id == lookup_user.id)) or 0,
-                        "passenger_requests": db.scalar(
-                            select(func.count(PassengerRequest.id)).where(PassengerRequest.passenger_id == lookup_user.id)
+                        "driver_trips_total": db.scalar(
+                            select(func.count(DriverTrip.id)).where(
+                                DriverTrip.driver_id == lookup_user.id
+                            )
                         )
                         or 0,
-                        "given_ratings": db.scalar(select(func.count(TripRating.id)).where(TripRating.passenger_id == lookup_user.id))
+                        "driver_trips_active": db.scalar(
+                            select(func.count(DriverTrip.id)).where(
+                                DriverTrip.driver_id == lookup_user.id,
+                                DriverTrip.status.in_([TripStatus.open, TripStatus.full]),
+                            )
+                        )
                         or 0,
-                        "received_ratings": db.scalar(select(func.count(TripRating.id)).where(TripRating.driver_id == lookup_user.id))
+                        "driver_trips_done": db.scalar(
+                            select(func.count(DriverTrip.id)).where(
+                                DriverTrip.driver_id == lookup_user.id,
+                                DriverTrip.status == TripStatus.done,
+                            )
+                        )
+                        or 0,
+                        "passenger_requests": db.scalar(
+                            select(func.count(PassengerRequest.id)).where(
+                                PassengerRequest.passenger_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "passenger_requests_active": db.scalar(
+                            select(func.count(PassengerRequest.id)).where(
+                                PassengerRequest.passenger_id == lookup_user.id,
+                                PassengerRequest.status.in_(
+                                    [
+                                        RequestStatus.open,
+                                        RequestStatus.locked,
+                                        RequestStatus.chosen,
+                                    ]
+                                ),
+                            )
+                        )
+                        or 0,
+                        "claims_total": db.scalar(
+                            select(func.count(RequestClaim.id)).where(
+                                RequestClaim.driver_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "claims_pending": db.scalar(
+                            select(func.count(RequestClaim.id)).where(
+                                RequestClaim.driver_id == lookup_user.id,
+                                RequestClaim.status == ClaimStatus.pending,
+                            )
+                        )
+                        or 0,
+                        "claims_accepted": db.scalar(
+                            select(func.count(RequestClaim.id)).where(
+                                RequestClaim.driver_id == lookup_user.id,
+                                RequestClaim.status == ClaimStatus.accepted,
+                            )
+                        )
+                        or 0,
+                        "claims_rejected": db.scalar(
+                            select(func.count(RequestClaim.id)).where(
+                                RequestClaim.driver_id == lookup_user.id,
+                                RequestClaim.status == ClaimStatus.rejected,
+                            )
+                        )
+                        or 0,
+                        "claims_completed": db.scalar(
+                            select(func.count(RequestClaim.id)).where(
+                                RequestClaim.driver_id == lookup_user.id,
+                                RequestClaim.status == ClaimStatus.completed,
+                            )
+                        )
+                        or 0,
+                        "given_ratings": db.scalar(
+                            select(func.count(TripRating.id)).where(
+                                TripRating.passenger_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "given_ratings_avg": round(float(avg_given), 2)
+                        if avg_given is not None
+                        else 0.0,
+                        "received_ratings": db.scalar(
+                            select(func.count(TripRating.id)).where(
+                                TripRating.driver_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "received_ratings_avg": round(float(avg_received), 2)
+                        if avg_received is not None
+                        else 0.0,
+                        "chats_as_driver": db.scalar(
+                            select(func.count(Chat.id)).where(
+                                Chat.driver_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "chats_as_passenger": db.scalar(
+                            select(func.count(Chat.id)).where(
+                                Chat.passenger_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "messages_sent": db.scalar(
+                            select(func.count(ChatMessage.id)).where(
+                                ChatMessage.sender_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "notifications_total": db.scalar(
+                            select(func.count(UserNotification.id)).where(
+                                UserNotification.user_id == lookup_user.id
+                            )
+                        )
+                        or 0,
+                        "notifications_unread": db.scalar(
+                            select(func.count(UserNotification.id)).where(
+                                UserNotification.user_id == lookup_user.id,
+                                UserNotification.is_read.is_(False),
+                            )
+                        )
                         or 0,
                     }
                 else:

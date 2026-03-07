@@ -263,7 +263,7 @@ Qila oladi:
 - Statistika ko'rish
 - Recent user/request
 - Trips by date
-- User lookup by ID
+- User lookup by ID (kengaytirilgan: profil fieldlari + claim/chat/notification/rating statistikalar)
 - Driver block/unblock
 - Resource metrics (host/container)
 - Server xatoliklari tab (`journalctl`) orqali service loglaridan `ERROR/Exception/Traceback/...` satrlarini ko'rsatish

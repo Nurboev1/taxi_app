@@ -233,17 +233,42 @@
               <tbody>
                 <tr><th>ID</th><td>{{ lookup_user.id }}</td></tr>
                 <tr><th>Ism</th><td>{{ lookup_user.name }}</td></tr>
+                <tr><th>First name</th><td>{{ lookup_user.first_name or '-' }}</td></tr>
+                <tr><th>Last name</th><td>{{ lookup_user.last_name or '-' }}</td></tr>
                 <tr><th>Telefon</th><td>{{ lookup_user.phone }}</td></tr>
+                <tr><th>Parol o'rnatilganmi</th><td>{{ 'Ha' if lookup_user.password_hash else "Yo'q" }}</td></tr>
                 <tr><th>Rol</th><td>{{ lookup_user.role.value }}</td></tr>
                 <tr><th>Jins</th><td>{{ lookup_user.gender.value if lookup_user.gender else '-' }}</td></tr>
+                <tr><th>Yosh</th><td>{{ lookup_user.age if lookup_user.age is not none else '-' }}</td></tr>
                 <tr><th>Til</th><td>{{ lookup_user.language.value if lookup_user.language else '-' }}</td></tr>
+                <tr><th>Telefon ko'rinishi</th><td>{{ lookup_user.phone_visible }}</td></tr>
                 <tr><th>Mashina modeli</th><td>{{ lookup_user.car_model or '-' }}</td></tr>
                 <tr><th>Mashina raqami</th><td>{{ lookup_user.car_number or '-' }}</td></tr>
+                <tr><th>Driver blocked</th><td>{{ lookup_user.driver_blocked }}</td></tr>
+                <tr><th>Driver override</th><td>{{ lookup_user.driver_access_override }}</td></tr>
+                <tr><th>Driver block sababi</th><td>{{ lookup_user.driver_block_reason or '-' }}</td></tr>
+                <tr><th>Driver unblock vaqti</th><td>{{ lookup_user.driver_unblocked_at or '-' }}</td></tr>
+                <tr><th>FCM token</th><td>{{ lookup_user.fcm_token or '-' }}</td></tr>
                 <tr><th>Ro'yxatdan o'tgan</th><td>{{ lookup_user.created_at }}</td></tr>
-                <tr><th>Haydovchi safarlari</th><td>{{ lookup_user_stats.driver_trips }}</td></tr>
+                <tr><th>Haydovchi safarlari (jami)</th><td>{{ lookup_user_stats.driver_trips_total }}</td></tr>
+                <tr><th>Haydovchi safarlari (faol)</th><td>{{ lookup_user_stats.driver_trips_active }}</td></tr>
+                <tr><th>Haydovchi safarlari (yakunlangan)</th><td>{{ lookup_user_stats.driver_trips_done }}</td></tr>
                 <tr><th>Yo'lovchi so'rovlari</th><td>{{ lookup_user_stats.passenger_requests }}</td></tr>
+                <tr><th>Yo'lovchi so'rovlari (faol)</th><td>{{ lookup_user_stats.passenger_requests_active }}</td></tr>
+                <tr><th>Claimlar (jami)</th><td>{{ lookup_user_stats.claims_total }}</td></tr>
+                <tr><th>Claimlar (pending)</th><td>{{ lookup_user_stats.claims_pending }}</td></tr>
+                <tr><th>Claimlar (accepted)</th><td>{{ lookup_user_stats.claims_accepted }}</td></tr>
+                <tr><th>Claimlar (rejected)</th><td>{{ lookup_user_stats.claims_rejected }}</td></tr>
+                <tr><th>Claimlar (completed)</th><td>{{ lookup_user_stats.claims_completed }}</td></tr>
                 <tr><th>Berilgan baholar</th><td>{{ lookup_user_stats.given_ratings }}</td></tr>
+                <tr><th>Berilgan baholar o'rtachasi</th><td>{{ lookup_user_stats.given_ratings_avg }}</td></tr>
                 <tr><th>Olgan baholar</th><td>{{ lookup_user_stats.received_ratings }}</td></tr>
+                <tr><th>Olgan baholar o'rtachasi</th><td>{{ lookup_user_stats.received_ratings_avg }}</td></tr>
+                <tr><th>Chatlar (driver)</th><td>{{ lookup_user_stats.chats_as_driver }}</td></tr>
+                <tr><th>Chatlar (passenger)</th><td>{{ lookup_user_stats.chats_as_passenger }}</td></tr>
+                <tr><th>Yuborgan xabarlar</th><td>{{ lookup_user_stats.messages_sent }}</td></tr>
+                <tr><th>Bildirishnomalar (jami)</th><td>{{ lookup_user_stats.notifications_total }}</td></tr>
+                <tr><th>Bildirishnomalar (o'qilmagan)</th><td>{{ lookup_user_stats.notifications_unread }}</td></tr>
               </tbody>
             </table>
           {% endif %}
