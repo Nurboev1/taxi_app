@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta, timezone
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -16,17 +14,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/verify-otp")
 
 
 def _sync_driver_block_status(db: Session, user: User) -> None:
-    if user.driver_blocked:
-        return
-    check_from = user.driver_unblocked_at or user.created_at
-    if check_from <= datetime.now(timezone.utc) - timedelta(days=30):
-        user.driver_blocked = True
-        user.driver_access_override = False
-        user.driver_block_reason = "auto_30_days"
-        user.driver_unblocked_at = None
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    # Automatic 30-day driver blocking disabled.
+    _ = db
+    _ = user
 
 
 def is_driver_blocked(user: User) -> bool:

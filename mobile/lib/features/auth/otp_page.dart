@@ -18,27 +18,11 @@ class OtpPage extends ConsumerStatefulWidget {
 
 class _OtpPageState extends ConsumerState<OtpPage> {
   final _otpCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _passwordConfirmCtrl = TextEditingController();
-
-  void _goAfterAuth() {
-    final role = ref.read(authControllerProvider).role;
-    final profile = ref.read(authControllerProvider).profile ?? {};
-    final blocked = profile['driver_blocked'] == true;
-    if (role == 'driver') {
-      context.go(blocked ? '/driver-blocked' : '/driver');
-    } else if (role == 'passenger') {
-      context.go('/passenger');
-    } else {
-      context.go('/role');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
     final s = AppStrings.of(state.profile?['language']?.toString());
-    final resetMode = widget.reason == 'reset_password';
 
     return NeoScaffold(
       title: s.t('otp_verify'),
@@ -49,11 +33,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  resetMode
-                      ? 'SMS kodni kiriting va yangi parol belgilang.'
-                      : 'OTP kodni kiriting va parol o\'rnating.',
-                ),
+                const Text('SMS orqali kelgan 4 xonali kodni kiriting.'),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _otpCtrl,
@@ -62,52 +42,23 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(labelText: s.t('otp_code')),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Yangi parol'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordConfirmCtrl,
-                  obscureText: true,
-                  decoration:
-                      const InputDecoration(labelText: 'Parolni takrorlang'),
-                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: state.loading
                       ? null
-                      : () async {
-                          if (_passwordCtrl.text.trim().length < 8) {
+                      : () {
+                          final otp = _otpCtrl.text.trim();
+                          if (otp.length != 4) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  'Parol kamida 8 ta belgidan iborat bo\'lishi kerak',
-                                ),
-                              ),
+                                  content: Text('4 xonali OTP kiriting')),
                             );
                             return;
                           }
-                          if (_passwordCtrl.text != _passwordConfirmCtrl.text) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Parollar mos kelmadi'),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final ok = await ref
-                              .read(authControllerProvider.notifier)
-                              .completeOtpAndSetPassword(
-                                _otpCtrl.text.trim(),
-                                _passwordCtrl.text.trim(),
-                                reason: widget.reason,
-                              );
-                          if (!context.mounted || !ok) return;
-                          _goAfterAuth();
+                          final encodedOtp = Uri.encodeQueryComponent(otp);
+                          context.push(
+                            '/set-password?reason=${widget.reason}&otp=$encodedOtp',
+                          );
                         },
                   child: Text(state.loading ? s.t('verifying') : s.t('confirm')),
                 ),

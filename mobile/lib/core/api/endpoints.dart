@@ -1,7 +1,7 @@
 class Endpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://170.168.6.115:8000',
+    defaultValue: 'https://safaruz.duckdns.org',
   );
 
   static const requestOtp = '/auth/request-otp';

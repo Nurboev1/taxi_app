@@ -14,14 +14,26 @@ class NeoScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(title),
         actions: actions,
       ),
-      body: SafeArea(
-        child: child,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? const [Color(0xFF0F172A), Color(0xFF111B2E)]
+                : const [Color(0xFFF4F7FC), Color(0xFFEFF4FA)],
+          ),
+        ),
+        child: SafeArea(
+          child: child,
+        ),
       ),
     );
   }

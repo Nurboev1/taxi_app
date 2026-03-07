@@ -59,6 +59,20 @@
     .bar { height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #0ea5e9, #0f766e); }
     .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
+    .logbox {
+      background: #0b1220;
+      color: #dbeafe;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 65vh;
+      overflow: auto;
+      border: 1px solid #1e293b;
+      line-height: 1.45;
+    }
+    .ok { color: #065f46; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -73,6 +87,8 @@
       <a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>
       <a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>
       <a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>
+      <a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>
+      <a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>
     </div>
 
     <div class="stats">
@@ -323,6 +339,74 @@
           {% else %}
             <div class="error">{{ resource_metrics.error }}</div>
           {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'errors' %}
+      <section class="card">
+        <h3>Server xatoliklari (journalctl)</h3>
+        <div class="body">
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="errors" />
+            <label for="error_service"><strong>Service:</strong></label>
+            <input id="error_service" name="error_service" value="{{ error_service }}" placeholder="Masalan: safaruz-backend" />
+            <label for="error_lines"><strong>Qator:</strong></label>
+            <input id="error_lines" type="number" name="error_lines" min="50" max="2000" value="{{ error_lines }}" />
+            <button type="submit">Yangilash</button>
+          </form>
+
+          {% if not server_errors.available %}
+            <div class="error">{{ server_errors.error }}</div>
+          {% else %}
+            <div class="meta">
+              Service: <strong>{{ server_errors.service }}</strong> |
+              Tekshirilgan qatorlar: <strong>{{ server_errors.scanned_lines }}</strong> |
+              Topilgan xatolar: <strong>{{ server_errors.error_count }}</strong> |
+              Yangilangan vaqt (UTC): <strong>{{ server_errors.generated_at }}</strong>
+            </div>
+            {% if server_errors.rows %}
+              <div class="logbox">{% for row in server_errors.rows %}{{ row }}
+{% endfor %}</div>
+            {% else %}
+              <div class="ok">Xatolik satrlari topilmadi.</div>
+            {% endif %}
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'security' %}
+      <section class="card">
+        <h3>Admin parolini o'zgartirish</h3>
+        <div class="body">
+          {% if admin_password_status == 'changed' %}
+            <div class="ok">Admin paroli muvaffaqiyatli yangilandi.</div>
+          {% elif admin_password_status == 'wrong_current_password' %}
+            <div class="error">Joriy parol noto'g'ri.</div>
+          {% elif admin_password_status == 'confirm_mismatch' %}
+            <div class="error">Yangi parol va tasdiq paroli mos emas.</div>
+          {% elif admin_password_status == 'invalid_new_password' %}
+            <div class="error">Yangi parol kamida 8 ta belgi bo'lishi kerak (maks 72 bayt).</div>
+          {% elif admin_password_status == 'db_error' %}
+            <div class="error">DB xatoligi. `alembic upgrade head` bajarilganini tekshiring.</div>
+          {% endif %}
+
+          <form method="post" action="/admin/change-password">
+            <div class="filters">
+              <label for="current_password"><strong>Joriy parol:</strong></label>
+              <input id="current_password" name="current_password" type="password" required />
+            </div>
+            <div class="filters">
+              <label for="new_password"><strong>Yangi parol:</strong></label>
+              <input id="new_password" name="new_password" type="password" minlength="8" required />
+            </div>
+            <div class="filters">
+              <label for="new_password_confirm"><strong>Yangi parol (qayta):</strong></label>
+              <input id="new_password_confirm" name="new_password_confirm" type="password" minlength="8" required />
+            </div>
+            <button type="submit">Parolni yangilash</button>
+          </form>
         </div>
       </section>
     {% endif %}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,8 @@ import 'package:taxi_mobile/core/theme/theme_controller.dart';
 import 'package:taxi_mobile/features/auth/auth_controller.dart';
 import 'package:taxi_mobile/features/auth/auth_page.dart';
 import 'package:taxi_mobile/features/auth/otp_page.dart';
+import 'package:taxi_mobile/features/auth/password_login_page.dart';
+import 'package:taxi_mobile/features/auth/set_password_page.dart';
 import 'package:taxi_mobile/features/chat/chat_page.dart';
 import 'package:taxi_mobile/features/chat/chats_page.dart';
 import 'package:taxi_mobile/features/driver/browse_passenger_requests_page.dart';
@@ -39,11 +42,21 @@ class TaxiApp extends ConsumerWidget {
         GoRoute(path: '/splash', builder: (_, __) => const _SplashPage()),
         GoRoute(path: '/auth', builder: (_, __) => const AuthPage()),
         GoRoute(
+            path: '/password-login',
+            builder: (_, __) => const PasswordLoginPage()),
+        GoRoute(
           path: '/otp',
           builder: (_, state) {
-            final reason =
-                state.uri.queryParameters['reason'] ?? 'register';
+            final reason = state.uri.queryParameters['reason'] ?? 'register';
             return OtpPage(reason: reason);
+          },
+        ),
+        GoRoute(
+          path: '/set-password',
+          builder: (_, state) {
+            final reason = state.uri.queryParameters['reason'] ?? 'register';
+            final otp = state.uri.queryParameters['otp'] ?? '';
+            return SetPasswordPage(reason: reason, otp: otp);
           },
         ),
         GoRoute(path: '/role', builder: (_, __) => const RolePage()),
@@ -115,44 +128,24 @@ class TaxiApp extends ConsumerWidget {
       darkTheme: _buildDarkTheme(),
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? const [
-                      Color(0xFF0B1220),
-                      Color(0xFF111B2E),
-                      Color(0xFF0F172A)
-                    ]
-                  : const [
-                      Color(0xFFE0EAFF),
-                      Color(0xFFF4F8FF),
-                      Color(0xFFEAFBF2)
-                    ],
-            ),
-          ),
+        final overlay = isDark
+            ? const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+              )
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+              );
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlay,
           child: child ?? const SizedBox.shrink(),
         );
       },
       routerConfig: router,
     );
-  }
-}
-
-class _NoTransitionsBuilder extends PageTransitionsBuilder {
-  const _NoTransitionsBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return child;
   }
 }
 
@@ -168,18 +161,23 @@ ThemeData _buildLightTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: Colors.transparent,
+    scaffoldBackgroundColor: const Color(0xFFF5F8FC),
     textTheme: text,
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: _NoTransitionsBuilder(),
-        TargetPlatform.iOS: _NoTransitionsBuilder(),
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
       },
     ),
     appBarTheme: AppBarTheme(
       centerTitle: false,
       backgroundColor: Colors.white.withValues(alpha: 0.58),
       surfaceTintColor: Colors.transparent,
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
       elevation: 0,
       scrolledUnderElevation: 0,
       titleTextStyle: text.titleLarge?.copyWith(
@@ -259,18 +257,23 @@ ThemeData _buildDarkTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: Colors.transparent,
+    scaffoldBackgroundColor: const Color(0xFF0F172A),
     textTheme: text,
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: _NoTransitionsBuilder(),
-        TargetPlatform.iOS: _NoTransitionsBuilder(),
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
       },
     ),
     appBarTheme: AppBarTheme(
       centerTitle: false,
       backgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.58),
       surfaceTintColor: Colors.transparent,
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
       elevation: 0,
       scrolledUnderElevation: 0,
       titleTextStyle: text.titleLarge?.copyWith(

@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 import os
 from pathlib import Path
+import subprocess
 import time
 
 from fastapi import APIRouter, Form, Request
@@ -8,11 +9,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.security import ALGORITHM
+from app.core.security import ALGORITHM, hash_password, verify_password
 from app.core.settings import settings
 from app.db.session import SessionLocal
+from app.models.admin_credential import AdminCredential
 from app.models.chat import Chat, ChatMessage
 from app.models.claim import RequestClaim
 from app.models.rating import TripRating
@@ -46,6 +49,34 @@ def _verify_admin_token(token: str | None) -> bool:
 
 def _admin_required(request: Request) -> bool:
     return _verify_admin_token(request.cookies.get(ADMIN_COOKIE))
+
+
+def _load_admin_credential(db: Session) -> AdminCredential | None:
+    try:
+        return db.scalar(
+            select(AdminCredential).where(
+                AdminCredential.username == settings.admin_username
+            )
+        )
+    except SQLAlchemyError:
+        # Migration hali qo'llanmagan bo'lishi mumkin.
+        return None
+
+
+def _admin_password_matches(db: Session, password: str) -> bool:
+    cred = _load_admin_credential(db)
+    if cred:
+        return verify_password(password, cred.password_hash)
+    return password == settings.admin_password
+
+
+def _validate_admin_new_password(password: str) -> str:
+    value = (password or "").strip()
+    if len(value) < 8:
+        raise ValueError("Yangi parol kamida 8 ta belgidan iborat bo'lishi kerak")
+    if len(value.encode("utf-8")) > 72:
+        raise ValueError("Yangi parol juda uzun. Maksimal 72 bayt")
+    return value
 
 
 def _collect_resource_metrics() -> dict[str, object]:
@@ -184,6 +215,62 @@ def _collect_resource_metrics() -> dict[str, object]:
     }
 
 
+def _collect_server_errors(service: str, lines: int = 300) -> dict[str, object]:
+    normalized_service = (service or "").strip() or "safaruz-backend"
+    safe_lines = max(50, min(lines, 2000))
+    cmd = [
+        "journalctl",
+        "-u",
+        normalized_service,
+        "-n",
+        str(safe_lines),
+        "--no-pager",
+        "--output=short-iso",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=6,
+            check=False,
+        )
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "service": normalized_service,
+            "error": "journalctl topilmadi. Bu tab Linux systemd serverda ishlaydi.",
+        }
+    except Exception as exc:
+        return {
+            "available": False,
+            "service": normalized_service,
+            "error": f"log o'qishda xatolik: {exc}",
+        }
+
+    raw_output = (proc.stdout or "").strip()
+    if proc.returncode != 0 and not raw_output:
+        stderr = (proc.stderr or "").strip() or f"journalctl return code: {proc.returncode}"
+        return {
+            "available": False,
+            "service": normalized_service,
+            "error": stderr,
+        }
+
+    all_rows = raw_output.splitlines() if raw_output else []
+    keywords = ("ERROR", "Error", "Exception", "Traceback", "CRITICAL", "FATAL", "failed", "Failed")
+    error_rows = [line for line in all_rows if any(k in line for k in keywords)]
+
+    return {
+        "available": True,
+        "service": normalized_service,
+        "scanned_lines": len(all_rows),
+        "error_count": len(error_rows),
+        "rows": error_rows[-200:],
+        "generated_at": datetime.now(timezone.utc),
+    }
+
+
 @router.get("/login", response_class=HTMLResponse)
 def admin_login_page(request: Request):
     if _admin_required(request):
@@ -201,7 +288,15 @@ def admin_login(
     username: str = Form(...),
     password: str = Form(...),
 ):
-    if username != settings.admin_username or password != settings.admin_password:
+    db: Session = SessionLocal()
+    try:
+        login_ok = username == settings.admin_username and _admin_password_matches(
+            db, password
+        )
+    finally:
+        db.close()
+
+    if not login_ok:
         return templates.TemplateResponse(
             request=request,
             name="admin/login.html",
@@ -246,12 +341,20 @@ def admin_dashboard(request: Request):
         lookup_user_id_raw = request.query_params.get("user_id")
         driver_access_user_id_raw = request.query_params.get("driver_access_user_id")
         driver_access_status = request.query_params.get("driver_access_status")
+        admin_password_status = request.query_params.get("admin_password_status")
+        error_service_raw = request.query_params.get("error_service", "safaruz-backend")
+        error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
         lookup_user_stats: dict[str, int] | None = None
         lookup_error: str | None = None
         driver_access_user: User | None = None
         driver_access_error: str | None = None
         resource_metrics = _collect_resource_metrics()
+        try:
+            error_lines = int(error_lines_raw)
+        except ValueError:
+            error_lines = 300
+        server_errors = _collect_server_errors(error_service_raw, lines=error_lines)
 
         users_total = db.scalar(select(func.count(User.id))) or 0
         drivers_total = db.scalar(select(func.count(User.id)).where(User.role == UserRole.driver)) or 0
@@ -374,7 +477,11 @@ def admin_dashboard(request: Request):
             "driver_access_user": driver_access_user,
             "driver_access_error": driver_access_error,
             "driver_access_status": driver_access_status or "",
+            "admin_password_status": admin_password_status or "",
             "resource_metrics": resource_metrics,
+            "server_errors": server_errors,
+            "error_service": error_service_raw,
+            "error_lines": error_lines,
         },
     )
 
@@ -420,5 +527,67 @@ def admin_driver_access(
 
     return RedirectResponse(
         url=f"/admin?tab=driver_access&driver_access_user_id={user_id}&driver_access_status={status}",
+        status_code=302,
+    )
+
+
+@router.post("/change-password")
+def admin_change_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    new_password_confirm: str = Form(...),
+):
+    if not _admin_required(request):
+        return RedirectResponse(url="/admin/login", status_code=302)
+
+    if new_password != new_password_confirm:
+        return RedirectResponse(
+            url="/admin?tab=security&admin_password_status=confirm_mismatch",
+            status_code=302,
+        )
+
+    try:
+        normalized_new_password = _validate_admin_new_password(new_password)
+    except ValueError:
+        return RedirectResponse(
+            url="/admin?tab=security&admin_password_status=invalid_new_password",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        if not _admin_password_matches(db, current_password):
+            return RedirectResponse(
+                url="/admin?tab=security&admin_password_status=wrong_current_password",
+                status_code=302,
+            )
+
+        credential = _load_admin_credential(db)
+        now = datetime.now(timezone.utc)
+        hashed = hash_password(normalized_new_password)
+        if credential is None:
+            credential = AdminCredential(
+                username=settings.admin_username,
+                password_hash=hashed,
+                created_at=now,
+                updated_at=now,
+            )
+        else:
+            credential.password_hash = hashed
+            credential.updated_at = now
+        db.add(credential)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=security&admin_password_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=security&admin_password_status=changed",
         status_code=302,
     )
