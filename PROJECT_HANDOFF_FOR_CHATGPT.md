@@ -18,6 +18,11 @@ Main branch head (local): `dcf0a91`
 - Xavfsizlik yangilandi:
   - Auth endpointlarga process-level rate-limit qo'shildi (`request-otp`, `complete-otp`, `login-password`, `verify-otp`)
   - CORS `*`dan env-based aniq ro'yxatga o'tdi (`CORS_ALLOWED_ORIGINS`)
+- Monitoring qo'shildi:
+  - Sentry integratsiya (`SENTRY_DSN` orqali)
+  - `/health` endpointi `deep=true` da `db/sms/fcm` tekshiradi
+  - Deep health degradeda `503` qaytaradi
+  - `HEALTHCHECK_FAIL_ON_SMS`, `HEALTHCHECK_FAIL_ON_FCM` orqali strictlik boshqariladi
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
@@ -100,10 +105,11 @@ Routers:
 - `legal`
 
 Health:
-- `GET /health` => `{ "status": "ok" }`
+- `GET /health` => quick (`status`, `timestamp`)
+- `GET /health?deep=true` => `db/sms/fcm` checks + degradeda `503`
 
 CORS:
-- Hozir `allow_origins=["*"]` (production uchun qattiq cheklash tavsiya).
+- Env orqali boshqariladi: `CORS_ALLOWED_ORIGINS`.
 
 ### 4.2 Sozlamalar
 Fayl: `backend/app/core/settings.py`

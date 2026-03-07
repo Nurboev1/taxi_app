@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     auth_rate_complete_otp_per_phone: int = 20
     auth_rate_login_password_per_ip: int = 60
     auth_rate_login_password_per_phone: int = 12
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.0
+    healthcheck_deep_default: bool = False
+    healthcheck_fail_on_sms: bool = False
+    healthcheck_fail_on_fcm: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
