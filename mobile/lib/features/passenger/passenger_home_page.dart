@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/api/api_client.dart';
 import 'package:taxi_mobile/core/theme/theme_controller.dart';
@@ -14,6 +15,11 @@ import 'package:taxi_mobile/features/notifications/notifications_controller.dart
 
 import '../auth/auth_controller.dart';
 import 'passenger_controller.dart';
+
+Future<void> _openSupportBot() async {
+  final uri = Uri.parse('https://t.me/SafarUzSupportBot');
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
 
 class PassengerHomePage extends ConsumerStatefulWidget {
   const PassengerHomePage({super.key});
@@ -394,6 +400,12 @@ class _PassengerProfileTab extends ConsumerWidget {
           title: s.t('settings'),
           subtitle: s.t('settings_manage_subtitle'),
           onTap: () => context.push('/settings'),
+        ),
+        _ActionTile(
+          icon: Icons.support_agent_outlined,
+          title: s.t('contact_support'),
+          subtitle: 'Telegram: @SafarUzSupportBot',
+          onTap: () => _openSupportBot(),
         ),
       ],
     );

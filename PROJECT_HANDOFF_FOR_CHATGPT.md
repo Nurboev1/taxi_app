@@ -38,6 +38,9 @@ Main branch head (local): `dcf0a91`
   - user botdan `/close` yoki `Ticketni yopish` tugmasi bilan yopadi
   - support statusni paneldan o'zgartira olmaydi
   - support javobidan keyin 24 soat user javob bermasa auto-close
+- Mobile profil tablarida (`driver` va `passenger`) eng pastiga `Bog'lanish` action tile qo'shildi:
+  - `Telegram: @SafarUzSupportBot`
+  - Bu tugma profil detail sahifasida emas, aynan pastki `Profil` tab ichida.
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
