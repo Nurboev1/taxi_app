@@ -42,6 +42,9 @@ Main branch head (local before this handoff update): `f1df2f7`
   - `Telegram: @SafarUzSupportBot`
   - Bu tugma profil detail sahifasida emas, aynan pastki `Profil` tab ichida.
 - Legal sahifalardagi support aloqa ham `@SafarUzSupportBot`ga almashtirilgan.
+- FCM push uchun dependency fix:
+  - `backend/requirements.txt`ga `requests==2.32.3` qo'shildi
+  - `backend/app/services/push.py` import xatosi logi aniqroq qilindi (`google-auth + requests`)
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:

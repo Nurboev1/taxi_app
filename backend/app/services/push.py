@@ -95,9 +95,10 @@ def _send_fcm_v1(
     try:
         from google.auth.transport.requests import Request as GoogleAuthRequest
         from google.oauth2 import service_account
-    except Exception:
+    except Exception as e:
         logger.error(
-            "FCM v1 requires google-auth package. Install backend requirements."
+            "FCM v1 dependency import failed (%s). Install requirements (google-auth + requests).",
+            e,
         )
         return False
 
