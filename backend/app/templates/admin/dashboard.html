@@ -91,6 +91,7 @@
       {% if 'driver_access' in tab_access %}<a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>{% endif %}
       {% if 'resources' in tab_access %}<a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>{% endif %}
       {% if 'errors' in tab_access %}<a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>{% endif %}
+      {% if 'support_tickets' in tab_access %}<a class="tab {% if tab == 'support_tickets' %}active{% endif %}" href="/admin?tab=support_tickets">Support ticketlar</a>{% endif %}
       {% if 'security' in tab_access %}<a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>{% endif %}
       {% if 'admin_accounts' in tab_access %}<a class="tab {% if tab == 'admin_accounts' %}active{% endif %}" href="/admin?tab=admin_accounts">Admin accountlar</a>{% endif %}
     </div>
@@ -400,6 +401,100 @@
             {% else %}
               <div class="ok">Xatolik satrlari topilmadi.</div>
             {% endif %}
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'support_tickets' %}
+      <section class="card">
+        <h3>Support ticketlar</h3>
+        <div class="body">
+          {% if support_tickets_error %}
+            <div class="error">{{ support_tickets_error }}</div>
+          {% endif %}
+
+          {% if support_tickets_status == 'updated' %}
+            <div class="ok">Ticket statusi yangilandi.</div>
+          {% elif support_tickets_status == 'invalid_status' %}
+            <div class="error">Status noto'g'ri yuborildi.</div>
+          {% elif support_tickets_status == 'not_found' %}
+            <div class="error">Ticket topilmadi.</div>
+          {% elif support_tickets_status == 'db_error' %}
+            <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
+          {% endif %}
+
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="support_tickets" />
+            <label for="support_ticket_filter"><strong>Status:</strong></label>
+            <select
+              id="support_ticket_filter"
+              name="support_ticket_filter"
+              style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;"
+            >
+              <option value="open" {% if support_ticket_filter == 'open' %}selected{% endif %}>open</option>
+              <option value="in_progress" {% if support_ticket_filter == 'in_progress' %}selected{% endif %}>in_progress</option>
+              <option value="closed" {% if support_ticket_filter == 'closed' %}selected{% endif %}>closed</option>
+              <option value="all" {% if support_ticket_filter == 'all' %}selected{% endif %}>all</option>
+            </select>
+            <button type="submit">Filtrlash</button>
+          </form>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Vaqt</th>
+                <th>User</th>
+                <th>Aloqa</th>
+                <th>Manba</th>
+                <th>Mavzu</th>
+                <th>Xabar</th>
+                <th>Status</th>
+                <th>Yangilash</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in support_tickets %}
+                <tr>
+                  <td>{{ row.id }}</td>
+                  <td>{{ row.created_at }}</td>
+                  <td>{{ row.user_id or '-' }}</td>
+                  <td>
+                    {{ row.phone or '-' }}
+                    {% if row.telegram_chat_id %}
+                      <br/>chat: {{ row.telegram_chat_id }}
+                    {% endif %}
+                    {% if row.telegram_username %}
+                      <br/>@{{ row.telegram_username }}
+                    {% endif %}
+                  </td>
+                  <td>{{ row.source }}</td>
+                  <td>{{ row.subject or '-' }}</td>
+                  <td style="max-width:280px; white-space: pre-wrap;">{{ row.message }}</td>
+                  <td><strong>{{ row.status }}</strong></td>
+                  <td>
+                    <form method="post" action="/admin/support-tickets/status">
+                      <input type="hidden" name="ticket_id" value="{{ row.id }}" />
+                      <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
+                      <select
+                        name="new_status"
+                        style="border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:12px;"
+                      >
+                        <option value="open" {% if row.status == 'open' %}selected{% endif %}>open</option>
+                        <option value="in_progress" {% if row.status == 'in_progress' %}selected{% endif %}>in_progress</option>
+                        <option value="closed" {% if row.status == 'closed' %}selected{% endif %}>closed</option>
+                      </select>
+                      <button type="submit" style="margin-top:6px;">Saqlash</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          {% if not support_tickets %}
+            <div class="meta">Hozircha support ticket yo'q.</div>
           {% endif %}
         </div>
       </section>

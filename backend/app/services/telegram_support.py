@@ -22,6 +22,13 @@ def telegram_support_config_status() -> tuple[bool, str]:
     return True, "configured"
 
 
+def support_bot_link() -> str:
+    username = settings.telegram_support_bot_username.strip().lstrip("@")
+    if not username:
+        return "https://t.me/"
+    return f"https://t.me/{username}"
+
+
 def _build_message(
     *,
     user_id: int,
@@ -61,9 +68,10 @@ def send_support_message(
     if not token or not chat_id:
         raise TelegramSupportError("Telegram support bot sozlanmagan")
 
-    payload = {
-        "chat_id": chat_id,
-        "text": _build_message(
+    return _send_telegram_message(
+        token=token,
+        chat_id=chat_id,
+        text=_build_message(
             user_id=user_id,
             phone=phone,
             name=name,
@@ -71,9 +79,36 @@ def send_support_message(
             subject=subject,
             message=message,
         ),
-        "parse_mode": "HTML",
+        parse_mode="HTML",
+    )
+
+
+def send_bot_reply(*, chat_id: str, text: str, parse_mode: str | None = None) -> dict:
+    token = settings.telegram_support_bot_token.strip()
+    if not token:
+        raise TelegramSupportError("Telegram support bot token kiritilmagan")
+    return _send_telegram_message(
+        token=token,
+        chat_id=chat_id,
+        text=text,
+        parse_mode=parse_mode,
+    )
+
+
+def _send_telegram_message(
+    *,
+    token: str,
+    chat_id: str,
+    text: str,
+    parse_mode: str | None = None,
+) -> dict:
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
         "disable_web_page_preview": True,
     }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
     data = parse.urlencode(payload).encode("utf-8")
     req = request.Request(
         f"https://api.telegram.org/bot{token}/sendMessage",

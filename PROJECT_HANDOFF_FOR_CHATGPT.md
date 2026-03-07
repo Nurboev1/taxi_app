@@ -27,6 +27,14 @@ Main branch head (local): `dcf0a91`
   - Yangi endpoint: `POST /support/contact` (auth required)
   - Telegramga support xabar yuboradi (`TELEGRAM_SUPPORT_BOT_TOKEN`, `TELEGRAM_SUPPORT_CHAT_ID`)
   - Health deep checkga `telegram_support` qo'shildi
+- Telegram bot orqali support auth oqimi qo'shildi:
+  - `POST /support/telegram/webhook`
+  - Botda ketma-ket: telefon -> parol -> support xabari
+  - Support xabarlari DBga ticket sifatida saqlanadi
+- Admin panelga `Support ticketlar` tabi qo'shildi:
+  - faqat `support` va `superadmin` ko'ra oladi
+  - ticket statuslari: `open`, `in_progress`, `closed`
+  - status paneldan boshqariladi
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
@@ -273,7 +281,25 @@ Push yuborish:
 - bo'lmasa legacy key fallback
 - ikkalasi ham ishlamasa warning log
 
-### 4.11 Legal sahifalar
+### 4.11 Support (Telegram bot + ticketlar)
+Fayllar:
+- `backend/app/api/support.py`
+- `backend/app/models/support_ticket.py`
+- `backend/app/models/telegram_support_session.py`
+- `backend/app/services/telegram_support.py`
+
+Endpointlar:
+- `GET /support/link` -> bot link qaytaradi
+- `POST /support/contact` -> appdan yuborilgan support (auth required)
+- `POST /support/telegram/webhook` -> Telegram botdan kelgan xabarlar
+
+Telegram bot login oqimi:
+1) `/start`
+2) telefon raqam kiritiadi
+3) parol kiritiladi
+4) tasdiqlangandan keyin yozilgan har bir xabar `support_tickets`ga tushadi
+
+### 4.12 Legal sahifalar
 Fayllar:
 - `backend/app/api/legal.py`
 - `backend/app/templates/legal/privacy.html`
@@ -283,7 +309,7 @@ URL:
 - `/legal/privacy`
 - `/legal/terms`
 
-### 4.12 Admin panel
+### 4.13 Admin panel
 Fayl: `backend/app/api/admin.py`
 Template: `backend/app/templates/admin/dashboard.html`
 
@@ -293,6 +319,7 @@ Endpointlar:
 - `/admin` dashboard
 - `/admin/driver-access` (block/unblock)
 - `/admin/change-password` (POST)
+- `/admin/support-tickets/status` (POST)
 
 Qila oladi:
 - Statistika ko'rish
@@ -303,6 +330,7 @@ Qila oladi:
 - Resource metrics (host/container)
 - Server xatoliklari tab (`journalctl`) orqali service loglaridan `ERROR/Exception/Traceback/...` satrlarini ko'rsatish
 - Admin parolini paneldan o'zgartirish (DB hash + env fallback)
+- Support ticketlarni ko'rish va statusini yangilash (`support`/`superadmin` uchun)
 
 ---
 
@@ -319,10 +347,14 @@ Migrations:
 - `0008_user_fcm_token.py`
 - `0009_user_password_hash.py`
 - `0010_admin_credentials.py`
+- `0011_admin_roles_and_status.py`
+- `0012_admin_audit_logs.py`
+- `0013_support_tickets_and_telegram_sessions.py`
 
 Asosiy jadvallar:
 - `users`
 - `admin_credentials`
+- `admin_audit_logs`
 - `otp_codes`
 - `driver_trips`
 - `passenger_requests`
@@ -331,6 +363,8 @@ Asosiy jadvallar:
 - `chat_messages`
 - `trip_ratings`
 - `user_notifications`
+- `support_tickets`
+- `telegram_support_sessions`
 
 Muhim constraintlar:
 - `users.phone` unique

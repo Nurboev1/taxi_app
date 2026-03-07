@@ -7,6 +7,8 @@ from app.models.notification import UserNotification
 from app.models.otp import OtpCode
 from app.models.rating import TripRating
 from app.models.request import PassengerRequest
+from app.models.support_ticket import SupportTicket
+from app.models.telegram_support_session import TelegramSupportSession
 from app.models.trip import DriverTrip
 from app.models.user import User
 
@@ -26,6 +28,8 @@ __all__ = [
     "OtpCode",
     "TripRating",
     "PassengerRequest",
+    "SupportTicket",
+    "TelegramSupportSession",
     "DriverTrip",
     "User",
 ]

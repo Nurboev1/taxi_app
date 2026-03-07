@@ -23,6 +23,7 @@ from app.models.claim import RequestClaim
 from app.models.notification import UserNotification
 from app.models.rating import TripRating
 from app.models.request import PassengerRequest
+from app.models.support_ticket import SupportTicket
 from app.models.trip import DriverTrip
 from app.models.user import User
 from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
@@ -50,8 +51,9 @@ ADMIN_TAB_ACCESS = {
         "errors",
         "security",
         "admin_accounts",
+        "support_tickets",
     },
-    ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security"},
+    ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security", "support_tickets"},
     ADMIN_ROLE_OPS: {"overview", "resources", "errors", "security"},
 }
 
@@ -447,6 +449,10 @@ def admin_dashboard(request: Request):
         driver_access_status = request.query_params.get("driver_access_status")
         admin_password_status = request.query_params.get("admin_password_status")
         admin_accounts_status = request.query_params.get("admin_accounts_status")
+        support_tickets_status = request.query_params.get("support_tickets_status")
+        support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
+        if support_ticket_filter not in {"all", "open", "in_progress", "closed"}:
+            support_ticket_filter = "open"
         error_service_raw = request.query_params.get("error_service", "safaruz-backend")
         error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
@@ -457,6 +463,8 @@ def admin_dashboard(request: Request):
         admin_accounts: list[AdminCredential] = []
         admin_accounts_error: str | None = None
         admin_audit_logs: list[AdminAuditLog] = []
+        support_tickets: list[SupportTicket] = []
+        support_tickets_error: str | None = None
         resource_metrics = _collect_resource_metrics()
         try:
             error_lines = int(error_lines_raw)
@@ -690,6 +698,16 @@ def admin_dashboard(request: Request):
                 admin_accounts = []
                 admin_audit_logs = []
                 admin_accounts_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
+
+        if _can_access_tab(admin_role, "support_tickets"):
+            try:
+                tickets_stmt = select(SupportTicket).order_by(SupportTicket.created_at.desc())
+                if support_ticket_filter != "all":
+                    tickets_stmt = tickets_stmt.where(SupportTicket.status == support_ticket_filter)
+                support_tickets = db.scalars(tickets_stmt.limit(300)).all()
+            except SQLAlchemyError:
+                support_tickets = []
+                support_tickets_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
     finally:
         db.close()
 
@@ -726,6 +744,10 @@ def admin_dashboard(request: Request):
             "admin_accounts": admin_accounts,
             "admin_accounts_error": admin_accounts_error,
             "admin_audit_logs": admin_audit_logs,
+            "support_tickets_status": support_tickets_status or "",
+            "support_ticket_filter": support_ticket_filter,
+            "support_tickets": support_tickets,
+            "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
             "error_service": error_service_raw,
@@ -793,6 +815,67 @@ def admin_driver_access(
 
     return RedirectResponse(
         url=f"/admin?tab=driver_access&driver_access_user_id={user_id}&driver_access_status={status}",
+        status_code=302,
+    )
+
+
+@router.post("/support-tickets/status")
+def admin_support_ticket_status(
+    request: Request,
+    ticket_id: int = Form(...),
+    new_status: str = Form(...),
+    support_ticket_filter: str = Form(default="open"),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] not in {ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT}:
+        return RedirectResponse(
+            url="/admin?tab=overview",
+            status_code=302,
+        )
+
+    normalized_status = (new_status or "").strip().lower()
+    if normalized_status not in {"open", "in_progress", "closed"}:
+        return RedirectResponse(
+            url="/admin?tab=support_tickets&support_tickets_status=invalid_status",
+            status_code=302,
+        )
+
+    normalized_filter = (support_ticket_filter or "open").strip().lower()
+    if normalized_filter not in {"all", "open", "in_progress", "closed"}:
+        normalized_filter = "open"
+
+    db: Session = SessionLocal()
+    try:
+        ticket = db.scalar(select(SupportTicket).where(SupportTicket.id == ticket_id))
+        if not ticket:
+            return RedirectResponse(
+                url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=not_found",
+                status_code=302,
+            )
+        ticket.status = normalized_status
+        ticket.updated_at = datetime.now(timezone.utc)
+        db.add(ticket)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action="support_ticket_status_updated",
+            target_username=str(ticket.user_id) if ticket.user_id is not None else None,
+            details=f"ticket_id={ticket.id},status={normalized_status}",
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=updated",
         status_code=302,
     )
 

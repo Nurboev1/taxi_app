@@ -11,3 +11,7 @@ class SupportContactIn(BaseModel):
 class SupportContactOut(BaseModel):
     message: str
     sent_at: datetime
+
+
+class SupportLinkOut(BaseModel):
+    url: str

@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     telegram_support_bot_token: str = ""
     telegram_support_chat_id: str = ""
     telegram_support_timeout_seconds: int = 8
+    telegram_support_bot_username: str = "SafarUzSupportBot"
+    telegram_support_webhook_secret: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

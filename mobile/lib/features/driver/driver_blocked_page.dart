@@ -12,7 +12,7 @@ class DriverBlockedPage extends ConsumerWidget {
   const DriverBlockedPage({super.key});
 
   Future<void> _openContact() async {
-    final uri = Uri.parse('https://t.me/Ilyos2618');
+    final uri = Uri.parse('https://t.me/SafarUzSupportBot');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
