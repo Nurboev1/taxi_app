@@ -14,8 +14,10 @@ from app.api.notifications import router as notifications_router
 from app.api.requests import router as request_router
 from app.api.rating import router as rating_router
 from app.api.role import router as role_router
+from app.api.support import router as support_router
 from app.core.settings import settings
 from app.db.session import SessionLocal
+from app.services.telegram_support import telegram_support_config_status
 
 try:
     import sentry_sdk  # type: ignore
@@ -74,6 +76,8 @@ def _is_strict_failure(component: str) -> bool:
         return settings.healthcheck_fail_on_sms
     if component == "fcm":
         return settings.healthcheck_fail_on_fcm
+    if component == "telegram_support":
+        return settings.healthcheck_fail_on_telegram_support
     return True
 
 app = FastAPI(title=settings.app_name)
@@ -100,10 +104,12 @@ def health(response: Response, deep: bool = settings.healthcheck_deep_default):
     db_ok, db_detail = _check_db()
     sms_ok, sms_detail = _check_sms()
     fcm_ok, fcm_detail = _check_fcm()
+    tg_ok, tg_detail = telegram_support_config_status()
     checks = {
         "db": {"ok": db_ok, "detail": db_detail},
         "sms": {"ok": sms_ok, "detail": sms_detail},
         "fcm": {"ok": fcm_ok, "detail": fcm_detail},
+        "telegram_support": {"ok": tg_ok, "detail": tg_detail},
     }
     strict_ok = all(
         check["ok"] if _is_strict_failure(name) else True
@@ -128,3 +134,4 @@ app.include_router(chat_router)
 app.include_router(rating_router)
 app.include_router(notifications_router)
 app.include_router(legal_router)
+app.include_router(support_router)

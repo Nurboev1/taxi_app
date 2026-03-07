@@ -23,6 +23,10 @@ Main branch head (local): `dcf0a91`
   - `/health` endpointi `deep=true` da `db/sms/fcm` tekshiradi
   - Deep health degradeda `503` qaytaradi
   - `HEALTHCHECK_FAIL_ON_SMS`, `HEALTHCHECK_FAIL_ON_FCM` orqali strictlik boshqariladi
+- Telegram support bot backendga ulandi:
+  - Yangi endpoint: `POST /support/contact` (auth required)
+  - Telegramga support xabar yuboradi (`TELEGRAM_SUPPORT_BOT_TOKEN`, `TELEGRAM_SUPPORT_CHAT_ID`)
+  - Health deep checkga `telegram_support` qo'shildi
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
@@ -103,10 +107,11 @@ Routers:
 - `rating`
 - `notifications`
 - `legal`
+- `support`
 
 Health:
 - `GET /health` => quick (`status`, `timestamp`)
-- `GET /health?deep=true` => `db/sms/fcm` checks + degradeda `503`
+- `GET /health?deep=true` => `db/sms/fcm/telegram_support` checks + degradeda `503`
 
 CORS:
 - Env orqali boshqariladi: `CORS_ALLOWED_ORIGINS`.
