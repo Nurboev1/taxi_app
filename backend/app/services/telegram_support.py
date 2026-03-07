@@ -83,7 +83,13 @@ def send_support_message(
     )
 
 
-def send_bot_reply(*, chat_id: str, text: str, parse_mode: str | None = None) -> dict:
+def send_bot_reply(
+    *,
+    chat_id: str,
+    text: str,
+    parse_mode: str | None = None,
+    reply_markup: dict | None = None,
+) -> dict:
     token = settings.telegram_support_bot_token.strip()
     if not token:
         raise TelegramSupportError("Telegram support bot token kiritilmagan")
@@ -92,6 +98,7 @@ def send_bot_reply(*, chat_id: str, text: str, parse_mode: str | None = None) ->
         chat_id=chat_id,
         text=text,
         parse_mode=parse_mode,
+        reply_markup=reply_markup,
     )
 
 
@@ -101,6 +108,7 @@ def _send_telegram_message(
     chat_id: str,
     text: str,
     parse_mode: str | None = None,
+    reply_markup: dict | None = None,
 ) -> dict:
     payload = {
         "chat_id": chat_id,
@@ -109,6 +117,8 @@ def _send_telegram_message(
     }
     if parse_mode:
         payload["parse_mode"] = parse_mode
+    if reply_markup:
+        payload["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
     data = parse.urlencode(payload).encode("utf-8")
     req = request.Request(
         f"https://api.telegram.org/bot{token}/sendMessage",

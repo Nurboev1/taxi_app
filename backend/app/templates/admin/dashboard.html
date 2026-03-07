@@ -73,6 +73,30 @@
       line-height: 1.45;
     }
     .ok { color: #065f46; font-weight: 700; }
+    .ticket-row { cursor: pointer; }
+    .ticket-row:hover { background: #f8fafc; }
+    .chat-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 10px 0 12px;
+      max-height: 45vh;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .chat-bubble {
+      max-width: 88%;
+      border-radius: 12px;
+      padding: 8px 10px;
+      white-space: pre-wrap;
+      line-height: 1.35;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .chat-user { align-self: flex-start; background: #f1f5f9; }
+    .chat-support { align-self: flex-end; background: #d1fae5; border-color: #a7f3d0; }
+    .chat-system { align-self: center; background: #fff7ed; border-color: #fed7aa; }
+    .chat-meta { display: block; margin-top: 4px; color: #64748b; font-size: 11px; }
   </style>
 </head>
 <body>
@@ -414,12 +438,18 @@
             <div class="error">{{ support_tickets_error }}</div>
           {% endif %}
 
-          {% if support_tickets_status == 'updated' %}
-            <div class="ok">Ticket statusi yangilandi.</div>
-          {% elif support_tickets_status == 'invalid_status' %}
-            <div class="error">Status noto'g'ri yuborildi.</div>
+          {% if support_tickets_status == 'replied' %}
+            <div class="ok">Javob yuborildi.</div>
+          {% elif support_tickets_status == 'empty_reply' %}
+            <div class="error">Javob matni bo'sh bo'lmasin.</div>
           {% elif support_tickets_status == 'not_found' %}
             <div class="error">Ticket topilmadi.</div>
+          {% elif support_tickets_status == 'no_chat' %}
+            <div class="error">Bu ticket Telegram chatga ulanmagan.</div>
+          {% elif support_tickets_status == 'ticket_closed' %}
+            <div class="error">Ticket yopilgan. Faqat foydalanuvchi qayta yozsa ochiladi.</div>
+          {% elif support_tickets_status == 'telegram_failed' %}
+            <div class="error">Telegramga yuborishda xato bo'ldi.</div>
           {% elif support_tickets_status == 'db_error' %}
             <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
           {% endif %}
@@ -449,14 +479,14 @@
                 <th>Aloqa</th>
                 <th>Manba</th>
                 <th>Mavzu</th>
-                <th>Xabar</th>
                 <th>Status</th>
-                <th>Yangilash</th>
+                <th>Oxirgi xabar</th>
+                <th>Ochish</th>
               </tr>
             </thead>
             <tbody>
               {% for row in support_tickets %}
-                <tr>
+                <tr class="ticket-row" onclick="openSupportTicket({{ row.id }})">
                   <td>{{ row.id }}</td>
                   <td>{{ row.created_at }}</td>
                   <td>{{ row.user_id or '-' }}</td>
@@ -471,27 +501,52 @@
                   </td>
                   <td>{{ row.source }}</td>
                   <td>{{ row.subject or '-' }}</td>
-                  <td style="max-width:280px; white-space: pre-wrap;">{{ row.message }}</td>
                   <td><strong>{{ row.status }}</strong></td>
-                  <td>
-                    <form method="post" action="/admin/support-tickets/status">
-                      <input type="hidden" name="ticket_id" value="{{ row.id }}" />
-                      <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
-                      <select
-                        name="new_status"
-                        style="border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:12px;"
-                      >
-                        <option value="open" {% if row.status == 'open' %}selected{% endif %}>open</option>
-                        <option value="in_progress" {% if row.status == 'in_progress' %}selected{% endif %}>in_progress</option>
-                        <option value="closed" {% if row.status == 'closed' %}selected{% endif %}>closed</option>
-                      </select>
-                      <button type="submit" style="margin-top:6px;">Saqlash</button>
-                    </form>
-                  </td>
+                  <td style="max-width:280px; white-space: pre-wrap;">{{ row.message }}</td>
+                  <td><button type="button" onclick="event.stopPropagation(); openSupportTicket({{ row.id }})">Ochish</button></td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
+
+          {% for row in support_tickets %}
+            <dialog id="ticket-{{ row.id }}">
+              <div class="modal-head">
+                <strong>Ticket #{{ row.id }} ({{ row.status }})</strong>
+                <button type="button" onclick="closeSupportTicket({{ row.id }})">Yopish</button>
+              </div>
+              <div class="modal-body">
+                <div class="meta">
+                  User ID: {{ row.user_id or '-' }} |
+                  Phone: {{ row.phone or '-' }} |
+                  Telegram chat: {{ row.telegram_chat_id or '-' }} |
+                  Source: {{ row.source }}
+                </div>
+                <div class="chat-wrap">
+                  {% for msg in support_ticket_messages.get(row.id, []) %}
+                    <div class="chat-bubble {% if msg.sender_role == 'support' %}chat-support{% elif msg.sender_role == 'system' %}chat-system{% else %}chat-user{% endif %}">
+                      {{ msg.message }}
+                      <span class="chat-meta">{{ msg.sender_role }} | {{ msg.created_at }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+
+                {% if row.status != 'closed' %}
+                  <form method="post" action="/admin/support-tickets/reply">
+                    <input type="hidden" name="ticket_id" value="{{ row.id }}" />
+                    <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
+                    <div class="filters">
+                      <label for="reply_{{ row.id }}"><strong>Javob:</strong></label>
+                      <input id="reply_{{ row.id }}" name="reply_text" style="min-width:280px;" required />
+                      <button type="submit">Yuborish</button>
+                    </div>
+                  </form>
+                {% else %}
+                  <div class="meta">Bu ticket yopilgan. Foydalanuvchi botdan qayta yozsa yangi/ochiq ticket paydo bo'ladi.</div>
+                {% endif %}
+              </div>
+            </dialog>
+          {% endfor %}
 
           {% if not support_tickets %}
             <div class="meta">Hozircha support ticket yo'q.</div>
@@ -677,6 +732,20 @@
       const dlg = document.getElementById(`pax-${tripId}`);
       if (dlg) dlg.close();
     }
+    function openSupportTicket(ticketId) {
+      const dlg = document.getElementById(`ticket-${ticketId}`);
+      if (dlg) dlg.showModal();
+    }
+    function closeSupportTicket(ticketId) {
+      const dlg = document.getElementById(`ticket-${ticketId}`);
+      if (dlg) dlg.close();
+    }
+
+    {% if tab == 'support_tickets' and support_ticket_open %}
+      window.addEventListener('load', function () {
+        openSupportTicket({{ support_ticket_open|int }});
+      });
+    {% endif %}
   </script>
 </body>
 </html>

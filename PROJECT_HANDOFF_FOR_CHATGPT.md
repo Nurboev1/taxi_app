@@ -33,8 +33,11 @@ Main branch head (local): `dcf0a91`
   - Support xabarlari DBga ticket sifatida saqlanadi
 - Admin panelga `Support ticketlar` tabi qo'shildi:
   - faqat `support` va `superadmin` ko'ra oladi
-  - ticket statuslari: `open`, `in_progress`, `closed`
-  - status paneldan boshqariladi
+  - ticket ustiga bosilganda full chat dialog ochiladi
+  - support javobi paneldan yuborilganda Telegram userga ketadi
+  - user botdan `/close` yoki `Ticketni yopish` tugmasi bilan yopadi
+  - support statusni paneldan o'zgartira olmaydi
+  - support javobidan keyin 24 soat user javob bermasa auto-close
 - `admin_credentials` modeli kengaydi:
   - `role`, `is_active`, `created_by` fieldlar qo'shildi
 - Yangi migration:
@@ -351,6 +354,7 @@ Migrations:
 - `0011_admin_roles_and_status.py`
 - `0012_admin_audit_logs.py`
 - `0013_support_tickets_and_telegram_sessions.py`
+- `0014_ticket_messages.py`
 
 Asosiy jadvallar:
 - `users`
@@ -365,6 +369,7 @@ Asosiy jadvallar:
 - `trip_ratings`
 - `user_notifications`
 - `support_tickets`
+- `support_ticket_messages`
 - `telegram_support_sessions`
 
 Muhim constraintlar:

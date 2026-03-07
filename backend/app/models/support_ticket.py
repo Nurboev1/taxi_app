@@ -18,9 +18,14 @@ class SupportTicket(Base):
     subject: Mapped[str | None] = mapped_column(String(120), nullable=True)
     message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    last_actor: Mapped[str] = mapped_column(String(24), default="user", index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)

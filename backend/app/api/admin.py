@@ -24,9 +24,18 @@ from app.models.notification import UserNotification
 from app.models.rating import TripRating
 from app.models.request import PassengerRequest
 from app.models.support_ticket import SupportTicket
+from app.models.support_ticket_message import SupportTicketMessage
 from app.models.trip import DriverTrip
 from app.models.user import User
 from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
+from app.services.support_tickets import (
+    SENDER_SUPPORT,
+    TICKET_STATUS_CLOSED,
+    TICKET_STATUS_IN_PROGRESS,
+    append_ticket_message,
+    auto_close_stale_tickets,
+)
+from app.services.telegram_support import TelegramSupportError, send_bot_reply
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
@@ -450,6 +459,7 @@ def admin_dashboard(request: Request):
         admin_password_status = request.query_params.get("admin_password_status")
         admin_accounts_status = request.query_params.get("admin_accounts_status")
         support_tickets_status = request.query_params.get("support_tickets_status")
+        support_ticket_open = request.query_params.get("support_ticket_open", "").strip()
         support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
         if support_ticket_filter not in {"all", "open", "in_progress", "closed"}:
             support_ticket_filter = "open"
@@ -464,6 +474,7 @@ def admin_dashboard(request: Request):
         admin_accounts_error: str | None = None
         admin_audit_logs: list[AdminAuditLog] = []
         support_tickets: list[SupportTicket] = []
+        support_ticket_messages: dict[int, list[SupportTicketMessage]] = {}
         support_tickets_error: str | None = None
         resource_metrics = _collect_resource_metrics()
         try:
@@ -701,12 +712,26 @@ def admin_dashboard(request: Request):
 
         if _can_access_tab(admin_role, "support_tickets"):
             try:
+                auto_close_stale_tickets(db)
                 tickets_stmt = select(SupportTicket).order_by(SupportTicket.created_at.desc())
                 if support_ticket_filter != "all":
                     tickets_stmt = tickets_stmt.where(SupportTicket.status == support_ticket_filter)
                 support_tickets = db.scalars(tickets_stmt.limit(300)).all()
+                ticket_ids = [t.id for t in support_tickets]
+                if ticket_ids:
+                    message_rows = db.scalars(
+                        select(SupportTicketMessage)
+                        .where(SupportTicketMessage.ticket_id.in_(ticket_ids))
+                        .order_by(
+                            SupportTicketMessage.ticket_id.asc(),
+                            SupportTicketMessage.created_at.asc(),
+                        )
+                    ).all()
+                    for row in message_rows:
+                        support_ticket_messages.setdefault(row.ticket_id, []).append(row)
             except SQLAlchemyError:
                 support_tickets = []
+                support_ticket_messages = {}
                 support_tickets_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
     finally:
         db.close()
@@ -746,7 +771,9 @@ def admin_dashboard(request: Request):
             "admin_audit_logs": admin_audit_logs,
             "support_tickets_status": support_tickets_status or "",
             "support_ticket_filter": support_ticket_filter,
+            "support_ticket_open": support_ticket_open,
             "support_tickets": support_tickets,
+            "support_ticket_messages": support_ticket_messages,
             "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
@@ -829,7 +856,7 @@ def admin_support_ticket_status(
     admin_session = _get_admin_session(request)
     if not admin_session:
         return RedirectResponse(url="/admin/login", status_code=302)
-    if admin_session["role"] not in {ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT}:
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
         return RedirectResponse(
             url="/admin?tab=overview",
             status_code=302,
@@ -876,6 +903,109 @@ def admin_support_ticket_status(
 
     return RedirectResponse(
         url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=updated",
+        status_code=302,
+    )
+
+
+@router.post("/support-tickets/reply")
+def admin_support_ticket_reply(
+    request: Request,
+    ticket_id: int = Form(...),
+    reply_text: str = Form(...),
+    support_ticket_filter: str = Form(default="open"),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] not in {ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT}:
+        return RedirectResponse(
+            url="/admin?tab=overview",
+            status_code=302,
+        )
+
+    normalized_filter = (support_ticket_filter or "open").strip().lower()
+    if normalized_filter not in {"all", "open", "in_progress", "closed"}:
+        normalized_filter = "open"
+
+    text = (reply_text or "").strip()
+    if len(text) < 1:
+        return RedirectResponse(
+            url=(
+                f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                f"&support_tickets_status=empty_reply&support_ticket_open={ticket_id}"
+            ),
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        auto_close_stale_tickets(db)
+        ticket = db.scalar(select(SupportTicket).where(SupportTicket.id == ticket_id))
+        if not ticket:
+            return RedirectResponse(
+                url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=not_found",
+                status_code=302,
+            )
+        if ticket.status == TICKET_STATUS_CLOSED:
+            return RedirectResponse(
+                url=(
+                    f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                    f"&support_tickets_status=ticket_closed&support_ticket_open={ticket_id}"
+                ),
+                status_code=302,
+            )
+        if not ticket.telegram_chat_id:
+            return RedirectResponse(
+                url=(
+                    f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                    f"&support_tickets_status=no_chat&support_ticket_open={ticket_id}"
+                ),
+                status_code=302,
+            )
+
+        outbound = (
+            "SafarUz Support javobi:\n"
+            f"{text}\n\n"
+            "Agar muammo hal bo'lgan bo'lsa /close deb ticketni yopishingiz mumkin."
+        )
+        send_bot_reply(chat_id=ticket.telegram_chat_id, text=outbound)
+
+        ticket.status = TICKET_STATUS_IN_PROGRESS
+        append_ticket_message(db=db, ticket=ticket, sender_role=SENDER_SUPPORT, message=text)
+        _write_admin_audit_log(
+            db=db,
+            actor_username=admin_session["username"],
+            action="support_ticket_reply",
+            target_username=str(ticket.user_id) if ticket.user_id is not None else None,
+            details=f"ticket_id={ticket.id}",
+        )
+        db.commit()
+    except TelegramSupportError:
+        db.rollback()
+        return RedirectResponse(
+            url=(
+                f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                f"&support_tickets_status=telegram_failed&support_ticket_open={ticket_id}"
+            ),
+            status_code=302,
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url=(
+                f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                f"&support_tickets_status=db_error&support_ticket_open={ticket_id}"
+            ),
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url=(
+            f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+            f"&support_tickets_status=replied&support_ticket_open={ticket_id}"
+        ),
         status_code=302,
     )
 
