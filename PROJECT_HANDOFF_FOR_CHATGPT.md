@@ -40,6 +40,7 @@ Main branch head (local): `dcf0a91`
 - Yangi migration:
   - `backend/alembic/versions/0011_admin_roles_and_status.py`
   - `backend/alembic/versions/0012_admin_audit_logs.py`
+  - `backend/alembic/versions/0013_support_tickets_and_telegram_sessions.py` (`revision` ID: `0013_support_tickets`, sababi `alembic_version` maydoni `varchar(32)`)
 - Eslatma: productionda albatta:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`

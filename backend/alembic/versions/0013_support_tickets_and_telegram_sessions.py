@@ -1,6 +1,6 @@
 """add support tickets and telegram sessions
 
-Revision ID: 0013_support_tickets_and_telegram_sessions
+Revision ID: 0013_support_tickets
 Revises: 0012_admin_audit_logs
 Create Date: 2026-03-07
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0013_support_tickets_and_telegram_sessions"
+revision: str = "0013_support_tickets"
 down_revision: Union[str, None] = "0012_admin_audit_logs"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
