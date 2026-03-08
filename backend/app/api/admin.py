@@ -1776,7 +1776,7 @@ def admin_support_ticket_status(
     admin_session = _get_admin_session(request)
     if not admin_session:
         return RedirectResponse(url="/admin/login", status_code=302)
-    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+    if admin_session["role"] not in {ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT}:
         return RedirectResponse(
             url="/admin?tab=overview",
             status_code=302,

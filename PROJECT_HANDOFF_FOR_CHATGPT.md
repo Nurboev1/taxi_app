@@ -45,6 +45,7 @@ Main branch head (local before this handoff update): `45709c2`
   - ticket table/modalda context (`trip/request/claim`) ko'rinadi
   - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
   - media message uchun `Telegramda ochish` tugmasi qo'shildi (support group message deep-link)
+  - ticket statusini o'zgartirish endi `superadmin` + `support` uchun ochildi
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
   - `backend/alembic/versions/0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`, `alembic_version` `varchar(32)` limitga mos)
@@ -422,7 +423,7 @@ Qila oladi:
 - Support ticketlarni chat ko'rinishida ochib ko'rish (`support`/`superadmin`)
 - Support javob yuborish (`support`/`superadmin`)
 - Saved reply template tanlab tez javob yuborish (`support`/`superadmin`)
-- Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
+- Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) `superadmin` + `support`
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
 - Ticket context (`trip/request/claim`) va media metadata ko'rish
 - Media xabardan Telegram support groupdagi original postga o'tish (`Telegramda ochish` deep-link)

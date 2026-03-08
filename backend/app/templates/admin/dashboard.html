@@ -1371,7 +1371,7 @@
                   Pending: <strong>{{ sla.get('pending_minutes', 0) }} min</strong>
                 </div>
 
-                {% if admin_role == 'superadmin' and row.status != 'closed' %}
+                {% if admin_role in ['superadmin', 'support'] and row.status != 'closed' %}
                   <form class="filters" method="post" action="/admin/support-tickets/status" style="margin-top:10px;">
                     <input type="hidden" name="ticket_id" value="{{ row.id }}" />
                     <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
