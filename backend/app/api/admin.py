@@ -109,6 +109,49 @@ SEARCH_KIND_ALIASES = {
     "logs": "audit",
     "all": "all",
 }
+SUPPORT_SAVED_REPLIES = [
+    {
+        "key": "password_reset",
+        "label": "Parolni tiklash yo'riqnomasi",
+        "text": (
+            "Parolni tiklash uchun ilovada `Parolni unutdingizmi?` tugmasini bosing, "
+            "telefon raqamingizni kiriting va OTP orqali yangi parol o'rnating."
+        ),
+    },
+    {
+        "key": "payment_check",
+        "label": "To'lov tekshirilmoqda",
+        "text": (
+            "To'lov holatini tekshirishga berdik. Iltimos, to'lov vaqti va summani yozib yuboring. "
+            "Tekshiruv yakuni bo'yicha alohida xabar beramiz."
+        ),
+    },
+    {
+        "key": "trip_delay",
+        "label": "Safar kechikishi",
+        "text": (
+            "Safar bo'yicha holat tekshirilyapti. Driver/passenger bilan bog'lanib, "
+            "aniq javobni qisqa vaqt ichida beramiz."
+        ),
+    },
+    {
+        "key": "driver_block_reason",
+        "label": "Driver cheklov sababi",
+        "text": (
+            "Akkount vaqtincha cheklangan. Sabab va keyingi qadamlarni tekshirib, "
+            "tasdiqdan so'ng kirishni qayta ochish bo'yicha javob beramiz."
+        ),
+    },
+    {
+        "key": "need_evidence",
+        "label": "Dalil so'rash",
+        "text": (
+            "Iltimos, muammo bo'yicha dalil yuboring: screenshot, video yoki voice. "
+            "Shunda tekshiruvni tezroq yakunlaymiz."
+        ),
+    },
+]
+SUPPORT_SAVED_REPLY_MAP = {item["key"]: item["text"] for item in SUPPORT_SAVED_REPLIES}
 
 
 def _normalize_admin_role(role: str | None) -> str:
@@ -1111,6 +1154,7 @@ def admin_dashboard(request: Request):
                             SupportTicket.telegram_username.ilike(q_like),
                             SupportTicket.subject.ilike(q_like),
                             SupportTicket.message.ilike(q_like),
+                            SupportTicket.context_summary.ilike(q_like),
                         ]
                         if search_query_id is not None:
                             ticket_filters.extend(
@@ -1619,6 +1663,7 @@ def admin_dashboard(request: Request):
             "support_ticket_messages": support_ticket_messages,
             "support_ticket_sla": support_ticket_sla,
             "support_sla_summary": support_sla_summary,
+            "support_saved_replies": SUPPORT_SAVED_REPLIES,
             "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
@@ -1785,6 +1830,7 @@ def admin_support_ticket_reply(
     request: Request,
     ticket_id: int = Form(...),
     reply_text: str = Form(...),
+    reply_template_key: str = Form(default=""),
     support_ticket_filter: str = Form(default="open"),
 ):
     admin_session = _get_admin_session(request)
@@ -1800,7 +1846,18 @@ def admin_support_ticket_reply(
     if normalized_filter not in {"all", "open", "in_progress", "closed"}:
         normalized_filter = "open"
 
+    selected_template_key = (reply_template_key or "").strip()
     text = (reply_text or "").strip()
+    if not text and selected_template_key:
+        text = SUPPORT_SAVED_REPLY_MAP.get(selected_template_key, "").strip()
+        if not text:
+            return RedirectResponse(
+                url=(
+                    f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+                    f"&support_tickets_status=invalid_reply_template&support_ticket_open={ticket_id}"
+                ),
+                status_code=302,
+            )
     if len(text) < 1:
         return RedirectResponse(
             url=(
@@ -1856,7 +1913,10 @@ def admin_support_ticket_reply(
             actor_username=admin_session["username"],
             action="support_ticket_reply",
             target_username=str(ticket.user_id) if ticket.user_id is not None else None,
-            details=f"ticket_id={ticket.id}",
+            details=(
+                f"ticket_id={ticket.id}"
+                + (f",template={selected_template_key}" if selected_template_key else "")
+            ),
             before_state=before_state,
             after_state={
                 "status": ticket.status,

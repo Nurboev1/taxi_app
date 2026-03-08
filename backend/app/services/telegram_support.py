@@ -102,6 +102,44 @@ def send_bot_reply(
     )
 
 
+def forward_bot_message(
+    *,
+    to_chat_id: str,
+    from_chat_id: str,
+    message_id: int,
+) -> dict:
+    token = settings.telegram_support_bot_token.strip()
+    if not token:
+        raise TelegramSupportError("Telegram support bot token kiritilmagan")
+    return _telegram_api_call(
+        token=token,
+        method="forwardMessage",
+        payload={
+            "chat_id": to_chat_id,
+            "from_chat_id": from_chat_id,
+            "message_id": int(message_id),
+        },
+    )
+
+
+def delete_bot_message(
+    *,
+    chat_id: str,
+    message_id: int,
+) -> dict:
+    token = settings.telegram_support_bot_token.strip()
+    if not token:
+        raise TelegramSupportError("Telegram support bot token kiritilmagan")
+    return _telegram_api_call(
+        token=token,
+        method="deleteMessage",
+        payload={
+            "chat_id": chat_id,
+            "message_id": int(message_id),
+        },
+    )
+
+
 def _send_telegram_message(
     *,
     token: str,
@@ -119,9 +157,18 @@ def _send_telegram_message(
         payload["parse_mode"] = parse_mode
     if reply_markup:
         payload["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    return _telegram_api_call(token=token, method="sendMessage", payload=payload)
+
+
+def _telegram_api_call(
+    *,
+    token: str,
+    method: str,
+    payload: dict[str, object],
+) -> dict:
     data = parse.urlencode(payload).encode("utf-8")
     req = request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage",
+        f"https://api.telegram.org/bot{token}/{method}",
         method="POST",
         data=data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},

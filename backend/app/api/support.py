@@ -11,7 +11,10 @@ from app.api.deps import get_current_user
 from app.core.security import verify_password
 from app.core.settings import settings
 from app.db.session import get_db
+from app.models.claim import RequestClaim
+from app.models.request import PassengerRequest
 from app.models.support_ticket import SupportTicket
+from app.models.trip import DriverTrip
 from app.models.telegram_support_session import TelegramSupportSession
 from app.models.user import User
 from app.schemas.support import SupportContactIn, SupportContactOut, SupportLinkOut
@@ -24,6 +27,8 @@ from app.services.support_tickets import (
 )
 from app.services.telegram_support import (
     TelegramSupportError,
+    delete_bot_message,
+    forward_bot_message,
     send_bot_reply,
     send_support_message,
     support_bot_link,
@@ -36,7 +41,6 @@ _STATE_AWAIT_PASSWORD = "await_password"
 _STATE_READY = "ready"
 
 _CLOSE_COMMANDS = {"/close", "/close_ticket", "ticketni yopish", "yopish"}
-
 
 def _normalize_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", phone or "")
@@ -89,6 +93,98 @@ def _active_ticket_for_user(db: Session, user_id: int) -> SupportTicket | None:
         .order_by(SupportTicket.last_activity_at.desc())
         .limit(1)
     )
+
+
+def _best_effort_delete_message(chat_id: str, message_id: int | None) -> None:
+    if message_id is None or not settings.telegram_support_delete_sensitive_messages:
+        return
+    try:
+        delete_bot_message(chat_id=chat_id, message_id=message_id)
+    except TelegramSupportError:
+        pass
+
+
+def _extract_media_payload(message_obj: dict) -> dict[str, object] | None:
+    photos = message_obj.get("photo")
+    if isinstance(photos, list) and photos:
+        item = photos[-1] if isinstance(photos[-1], dict) else {}
+        return {
+            "kind": "photo",
+            "file_id": str(item.get("file_id") or "").strip() or None,
+            "file_unique_id": str(item.get("file_unique_id") or "").strip() or None,
+            "mime_type": None,
+            "file_size": item.get("file_size") if isinstance(item.get("file_size"), int) else None,
+        }
+
+    for key in ("video", "voice", "audio", "document"):
+        item = message_obj.get(key)
+        if isinstance(item, dict):
+            return {
+                "kind": key,
+                "file_id": str(item.get("file_id") or "").strip() or None,
+                "file_unique_id": str(item.get("file_unique_id") or "").strip() or None,
+                "mime_type": str(item.get("mime_type") or "").strip() or None,
+                "file_size": item.get("file_size") if isinstance(item.get("file_size"), int) else None,
+            }
+    return None
+
+
+def _extract_user_context(db: Session, user_id: int) -> dict[str, object]:
+    latest_request = db.scalar(
+        select(PassengerRequest)
+        .where(PassengerRequest.passenger_id == user_id)
+        .order_by(PassengerRequest.created_at.desc())
+        .limit(1)
+    )
+    latest_trip = db.scalar(
+        select(DriverTrip)
+        .where(DriverTrip.driver_id == user_id)
+        .order_by(DriverTrip.created_at.desc())
+        .limit(1)
+    )
+    latest_claim_driver = db.scalar(
+        select(RequestClaim)
+        .where(RequestClaim.driver_id == user_id)
+        .order_by(RequestClaim.created_at.desc())
+        .limit(1)
+    )
+    latest_claim_passenger = db.scalar(
+        select(RequestClaim)
+        .join(PassengerRequest, PassengerRequest.id == RequestClaim.request_id)
+        .where(PassengerRequest.passenger_id == user_id)
+        .order_by(RequestClaim.created_at.desc())
+        .limit(1)
+    )
+    latest_claim = latest_claim_driver
+    if latest_claim_passenger and (
+        latest_claim is None or latest_claim_passenger.created_at > latest_claim.created_at
+    ):
+        latest_claim = latest_claim_passenger
+
+    summary_parts: list[str] = []
+    if latest_trip:
+        summary_parts.append(f"trip#{latest_trip.id}")
+    if latest_request:
+        summary_parts.append(f"request#{latest_request.id}")
+    if latest_claim:
+        summary_parts.append(f"claim#{latest_claim.id}")
+    return {
+        "trip_id": latest_trip.id if latest_trip else None,
+        "request_id": latest_request.id if latest_request else None,
+        "claim_id": latest_claim.id if latest_claim else None,
+        "summary": ", ".join(summary_parts),
+    }
+
+
+def _attach_ticket_context(db: Session, ticket: SupportTicket, user_id: int) -> dict[str, object]:
+    context = _extract_user_context(db, user_id)
+    ticket.context_trip_id = context["trip_id"] if isinstance(context["trip_id"], int) else None
+    ticket.context_request_id = context["request_id"] if isinstance(context["request_id"], int) else None
+    ticket.context_claim_id = context["claim_id"] if isinstance(context["claim_id"], int) else None
+    ticket.context_summary = str(context.get("summary") or "").strip() or None
+    ticket.context_refreshed_at = datetime.now(timezone.utc)
+    db.add(ticket)
+    return context
 
 
 def _notify_support_channel(ticket: SupportTicket, user: User, text: str, is_new: bool) -> None:
@@ -161,6 +257,7 @@ def contact_support(
         ticket.subject = subject or ticket.subject
         ticket.message = message
 
+    _attach_ticket_context(db, ticket, current_user.id)
     append_ticket_message(db=db, ticket=ticket, sender_role=SENDER_USER, message=message)
     db.commit()
 
@@ -206,7 +303,11 @@ def telegram_webhook(
     if not chat_id:
         return {"ok": True}
 
+    message_id_raw = message_obj.get("message_id")
+    message_id = int(message_id_raw) if isinstance(message_id_raw, int) else None
     text = str(message_obj.get("text") or "").strip()
+    media_payload = _extract_media_payload(message_obj)
+    media_caption = str(message_obj.get("caption") or "").strip()
     session = _get_or_create_session(db, chat_id)
 
     if text in {"/start", "/help"}:
@@ -233,25 +334,34 @@ def telegram_webhook(
         _reply(chat_id, "Session tozalandi. Qayta kirish uchun telefon raqamingizni yuboring.")
         return {"ok": True}
 
-    if not text:
-        _reply(chat_id, "Faqat matn yuboring.")
-        return {"ok": True}
-
     if session.state == _STATE_AWAIT_PHONE:
+        phone_input = text
+        if not phone_input:
+            contact = message_obj.get("contact")
+            if isinstance(contact, dict):
+                phone_input = str(contact.get("phone_number") or "").strip()
+        if not phone_input:
+            _reply(chat_id, "Telefon raqamni matn yoki contact ko'rinishida yuboring.")
+            return {"ok": True}
         try:
-            session.phone_candidate = _normalize_phone(text)
+            session.phone_candidate = _normalize_phone(phone_input)
         except ValueError:
             _reply(chat_id, "Telefon raqam formati noto'g'ri. Masalan: +998901234567")
             return {"ok": True}
 
+        _best_effort_delete_message(chat_id, message_id)
         session.state = _STATE_AWAIT_PASSWORD
         session.updated_at = datetime.now(timezone.utc)
         db.add(session)
         db.commit()
-        _reply(chat_id, "Endi parolingizni kiriting.")
+        _reply(chat_id, "Endi parolingizni kiriting. Xabar avtomatik o'chiriladi.")
         return {"ok": True}
 
     if session.state == _STATE_AWAIT_PASSWORD:
+        if not text:
+            _reply(chat_id, "Parolni matn ko'rinishida yuboring.")
+            return {"ok": True}
+        _best_effort_delete_message(chat_id, message_id)
         if not session.phone_candidate:
             session.state = _STATE_AWAIT_PHONE
             session.updated_at = datetime.now(timezone.utc)
@@ -262,7 +372,7 @@ def telegram_webhook(
 
         user = db.scalar(select(User).where(User.phone == session.phone_candidate))
         if not user or not user.password_hash or not verify_password(text, user.password_hash):
-            _reply(chat_id, "Telefon yoki parol noto'g'ri. Qayta urinib ko'ring.")
+            _reply(chat_id, "Telefon yoki parol noto'g'ri. Xavfsizlik uchun xabar o'chirildi, qayta urinib ko'ring.")
             return {"ok": True}
 
         session.user_id = user.id
@@ -273,6 +383,7 @@ def telegram_webhook(
         _reply(
             chat_id,
             "Tasdiqlandi. Endi support xabaringizni yozing.\n"
+            "Rasm/video/voice ham yuborishingiz mumkin.\n"
             "Muammo hal bo'lsa /close deb ticketni yopishingiz mumkin.",
             with_close_button=True,
         )
@@ -309,6 +420,25 @@ def telegram_webhook(
         _reply(chat_id, f"Ticket #{ticket_to_close.id} yopildi. Yangi savol bo'lsa, yozavering.")
         return {"ok": True}
 
+    if not text and not media_payload:
+        _reply(chat_id, "Matn yoki media (photo/video/voice/audio/document) yuboring.")
+        return {"ok": True}
+
+    incoming_kind = "text"
+    incoming_text = text
+    media_file_id = None
+    media_file_unique_id = None
+    media_mime_type = None
+    media_file_size = None
+    if media_payload:
+        incoming_kind = str(media_payload.get("kind") or "text").strip().lower()
+        incoming_text = media_caption
+        media_file_id = str(media_payload.get("file_id") or "").strip() or None
+        media_file_unique_id = str(media_payload.get("file_unique_id") or "").strip() or None
+        media_mime_type = str(media_payload.get("mime_type") or "").strip() or None
+        media_file_size = media_payload.get("file_size") if isinstance(media_payload.get("file_size"), int) else None
+
+    preview_text = incoming_text or f"[{incoming_kind} evidence]"
     now = datetime.now(timezone.utc)
     ticket = _active_ticket_for_user(db, user.id)
     is_new = ticket is None
@@ -320,7 +450,7 @@ def telegram_webhook(
             telegram_chat_id=chat_id,
             telegram_username=(message_obj.get("from") or {}).get("username"),
             subject="Telegram support",
-            message=text,
+            message=preview_text,
             status="open",
             last_actor=SENDER_USER,
             created_at=now,
@@ -333,15 +463,46 @@ def telegram_webhook(
     else:
         ticket.telegram_chat_id = chat_id
         ticket.telegram_username = (message_obj.get("from") or {}).get("username")
-        ticket.message = text
+        ticket.message = preview_text
 
-    append_ticket_message(db=db, ticket=ticket, sender_role=SENDER_USER, message=text)
+    context = _attach_ticket_context(db, ticket, user.id)
+    append_ticket_message(
+        db=db,
+        ticket=ticket,
+        sender_role=SENDER_USER,
+        message=preview_text,
+        message_kind=incoming_kind,
+        telegram_message_id=message_id,
+        media_file_id=media_file_id,
+        media_file_unique_id=media_file_unique_id,
+        media_mime_type=media_mime_type,
+        media_file_size=media_file_size,
+        media_caption=media_caption if incoming_kind != "text" else None,
+    )
 
     session.updated_at = datetime.now(timezone.utc)
     db.add(session)
     db.commit()
 
-    _notify_support_channel(ticket=ticket, user=user, text=text, is_new=is_new)
+    notify_lines: list[str] = []
+    if incoming_kind != "text":
+        notify_lines.append(f"[media:{incoming_kind}]")
+    notify_lines.append(preview_text)
+    context_summary = str(context.get("summary") or "").strip()
+    if context_summary:
+        notify_lines.append(f"Context: {context_summary}")
+    _notify_support_channel(ticket=ticket, user=user, text="\n".join(notify_lines), is_new=is_new)
+    if incoming_kind != "text" and message_id is not None:
+        support_chat_id = settings.telegram_support_chat_id.strip()
+        if support_chat_id:
+            try:
+                forward_bot_message(
+                    to_chat_id=support_chat_id,
+                    from_chat_id=chat_id,
+                    message_id=message_id,
+                )
+            except TelegramSupportError:
+                pass
     _reply(
         chat_id,
         f"Xabaringiz ticket #{ticket.id} ga qo'shildi. Tez orada javob beramiz.",

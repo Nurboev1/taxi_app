@@ -21,13 +21,27 @@ def append_ticket_message(
     ticket: SupportTicket,
     sender_role: str,
     message: str,
+    message_kind: str = "text",
+    telegram_message_id: int | None = None,
+    media_file_id: str | None = None,
+    media_file_unique_id: str | None = None,
+    media_mime_type: str | None = None,
+    media_file_size: int | None = None,
+    media_caption: str | None = None,
 ) -> SupportTicketMessage:
     now = datetime.now(timezone.utc)
     text = (message or "").strip()
     msg = SupportTicketMessage(
         ticket_id=ticket.id,
         sender_role=sender_role,
+        message_kind=(message_kind or "text").strip().lower() or "text",
+        telegram_message_id=telegram_message_id,
         message=text,
+        media_file_id=(media_file_id or "").strip() or None,
+        media_file_unique_id=(media_file_unique_id or "").strip() or None,
+        media_mime_type=(media_mime_type or "").strip() or None,
+        media_file_size=media_file_size,
+        media_caption=(media_caption or "").strip() or None,
         created_at=now,
     )
     ticket.updated_at = now

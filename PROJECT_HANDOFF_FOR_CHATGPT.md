@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, admin panel search360 sync)
+Last updated: 2026-03-08 (Asia/Tashkent, telegram support context/media/privacy sync)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `79367af`
+Main branch head (local before this handoff update): `4827913`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -35,8 +35,18 @@ Main branch head (local before this handoff update): `79367af`
   - prefix query qo'llab-quvvatlanadi (`user:`, `ticket:`, `trip:`, `request:`, `claim:`, `audit:`)
   - topilgan user uchun 360 summary (support, notif, trips, requests, claims)
   - unified timeline (user/support/trip/request/claim/audit eventlar)
+- Telegram support oqimi kengaytirildi:
+  - Auto-context attach: har ticketga latest `trip/request/claim` context biriktiriladi
+  - Media evidence: bot endi `photo/video/voice/audio/document`ni ticket historyga metadata bilan saqlaydi
+  - Support chat media forward: user yuborgan media support kanaliga forward qilinadi
+  - Login privacy: telefon/parol kirish xabarlari botda auto-delete (`TELEGRAM_SUPPORT_DELETE_SENSITIVE_MESSAGES=true`)
+- Admin `Support ticketlar` tabi kengaytirildi:
+  - saved replies dropdown (`reply template`) qo'shildi
+  - ticket table/modalda context (`trip/request/claim`) ko'rinadi
+  - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
+  - `backend/alembic/versions/0017_support_ticket_context_media.py`
 - Eslatma: productionda deploydan oldin:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`
@@ -197,6 +207,10 @@ Muhim envlar:
 - `SMS_PROVIDER` (`devsms` yoki `test`)
 - `OTP_TTL_MINUTES`, `OTP_COOLDOWN_SECONDS`
 - DevSMS parametrlari
+- Telegram support:
+  - `TELEGRAM_SUPPORT_BOT_TOKEN`, `TELEGRAM_SUPPORT_CHAT_ID`
+  - `TELEGRAM_SUPPORT_WEBHOOK_SECRET`
+  - `TELEGRAM_SUPPORT_DELETE_SENSITIVE_MESSAGES` (login paytida telefon/parol xabarlarini auto-delete)
 
 ### 4.3 Auth oqimi (eng muhim)
 Fayl: `backend/app/api/auth.py`
@@ -365,6 +379,9 @@ Telegram bot login oqimi:
 Support ticket real oqimi:
 - Bitta user uchun aktiv (`open`/`in_progress`) ticketga xabar append qilinadi.
 - Ticketdagi barcha yozishmalar `support_ticket_messages`da saqlanadi (chat history).
+- Bot media xabarlarni ham qabul qiladi: `photo/video/voice/audio/document`.
+- Har yangi xabarda ticketga latest context attach qilinadi: `trip_id/request_id/claim_id`.
+- Login bosqichida telefon/parol xabarlari botdan auto-delete qilinadi (privacy).
 - User botdan `/close` yoki `Ticketni yopish` yuborsa ticket yopiladi.
 - Support javobidan keyin user 24 soat ichida yozmasa ticket avtomatik yopiladi.
 - User keyin qayta yozsa yangi/ochiq ticket oqimi qayta boshlanadi.
@@ -403,8 +420,10 @@ Qila oladi:
 - Admin parolini paneldan o'zgartirish (DB hash + env fallback)
 - Support ticketlarni chat ko'rinishida ochib ko'rish (`support`/`superadmin`)
 - Support javob yuborish (`support`/`superadmin`)
+- Saved reply template tanlab tez javob yuborish (`support`/`superadmin`)
 - Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
+- Ticket context (`trip/request/claim`) va media metadata ko'rish
 - Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
 - Overview intelligence panel:
   - time window KPI (`24h/7d/30d/90d`)
@@ -435,6 +454,7 @@ Migrations:
 - `0014_ticket_messages.py`
 - `0015_request_seat_mix.py`
 - `0016_admin_audit_log_metadata.py`
+- `0017_support_ticket_context_media.py`
 
 Asosiy jadvallar:
 - `users`
@@ -647,6 +667,13 @@ Kerakli envlar:
 - `FCM_PROJECT_ID`
 - `FCM_SERVICE_ACCOUNT_FILE` (backend serverdagi json path)
 
+### 9.3 Telegram support bot
+Kerakli envlar:
+- `TELEGRAM_SUPPORT_BOT_TOKEN`
+- `TELEGRAM_SUPPORT_CHAT_ID`
+- `TELEGRAM_SUPPORT_WEBHOOK_SECRET`
+- `TELEGRAM_SUPPORT_DELETE_SENSITIVE_MESSAGES=true`
+
 Mobile:
 - `mobile/android/app/google-services.json` mavjud bo'lishi kerak.
 
@@ -712,7 +739,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
   - `mobile/lib/features/chat/chat_page.dart` ichidagi katta hero blok olib tashlandi
   - chat sahifasi birinchi ochilganda endi oxirgi xabarga avtomatik tushadi
 - Eslatma:
-  - `backend/.env.example` user tomonidan dirty; commitga qo'shmaslik kerak
+  - `backend/.env.example` ichidagi mavjud tokenlarni owner talabi bo'yicha o'chirmaslik kerak
   - agar keyingi redesign davom etsa, auth page'lar (`auth_page.dart`, `password_login_page.dart`, `otp_page.dart`, `set_password_page.dart`) ham shu neo vizual tizimga ko'chirilishi mumkin
 - 2026-03-08 admin panel wave:
   - admin dashboard/login dizayni to'liq yangilandi
@@ -737,7 +764,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan oxirgi migrationlarni (`0016_admin_audit_log_metadata`gacha) productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0017_support_ticket_context_media`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose

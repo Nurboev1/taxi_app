@@ -1256,6 +1256,8 @@
             <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
           {% elif support_tickets_status == 'invalid_status' %}
             <div class="error">Status noto'g'ri qiymatda yuborildi.</div>
+          {% elif support_tickets_status == 'invalid_reply_template' %}
+            <div class="error">Saved reply topilmadi. Qaytadan tanlang.</div>
           {% endif %}
 
           <div class="ticket-sla">
@@ -1287,6 +1289,7 @@
                   <th>User</th>
                   <th>Aloqa</th>
                   <th>Manba</th>
+                  <th>Context</th>
                   <th>Mavzu</th>
                   <th>Status</th>
                   <th>Waiting</th>
@@ -1309,6 +1312,13 @@
                       {% if row.telegram_username %}<br/>@{{ row.telegram_username }}{% endif %}
                     </td>
                     <td>{{ row.source }}</td>
+                    <td>
+                      {% if row.context_summary %}
+                        {{ row.context_summary }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
                     <td>{{ row.subject or '-' }}</td>
                     <td>
                       <span class="status-chip {% if row.status == 'open' %}chip-open{% elif row.status == 'in_progress' %}chip-progress{% else %}chip-closed{% endif %}">{{ row.status }}</span>
@@ -1356,6 +1366,7 @@
                   Phone: {{ row.phone or '-' }} |
                   Telegram chat: {{ row.telegram_chat_id or '-' }} |
                   Source: {{ row.source }} |
+                  Context: {{ row.context_summary or '-' }} |
                   Waiting on: <strong>{{ sla.get('waiting_on', '-') }}</strong> |
                   Pending: <strong>{{ sla.get('pending_minutes', 0) }} min</strong>
                 </div>
@@ -1377,7 +1388,21 @@
                 <div class="chat-wrap">
                   {% for msg in support_ticket_messages.get(row.id, []) %}
                     <div class="chat-bubble {% if msg.sender_role == 'support' %}chat-support{% elif msg.sender_role == 'system' %}chat-system{% else %}chat-user{% endif %}">
-                      {{ msg.message }}
+                      {% if msg.message_kind and msg.message_kind != 'text' %}
+                        <div><strong>[{{ msg.message_kind }}]</strong></div>
+                      {% endif %}
+                      {% if msg.message %}
+                        <div>{{ msg.message }}</div>
+                      {% endif %}
+                      {% if msg.media_caption %}
+                        <div class="meta">Caption: {{ msg.media_caption }}</div>
+                      {% endif %}
+                      {% if msg.media_file_size %}
+                        <div class="meta">Size: {{ msg.media_file_size }} bytes</div>
+                      {% endif %}
+                      {% if msg.telegram_message_id %}
+                        <div class="meta">Telegram msg id: {{ msg.telegram_message_id }}</div>
+                      {% endif %}
                       <span class="chat-meta">{{ msg.sender_role }} | {{ msg.created_at }}</span>
                     </div>
                   {% endfor %}
@@ -1388,8 +1413,17 @@
                     <input type="hidden" name="ticket_id" value="{{ row.id }}" />
                     <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
                     <div class="filters">
+                      <label for="reply_tpl_{{ row.id }}">Saved reply:</label>
+                      <select id="reply_tpl_{{ row.id }}" name="reply_template_key" onchange="applySavedReply({{ row.id }})">
+                        <option value="">-- tanlang --</option>
+                        {% for tpl in support_saved_replies %}
+                          <option value="{{ tpl.key }}" data-text="{{ tpl.text }}">{{ tpl.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="filters">
                       <label for="reply_{{ row.id }}">Javob:</label>
-                      <input id="reply_{{ row.id }}" name="reply_text" style="min-width:280px;" required />
+                      <input id="reply_{{ row.id }}" name="reply_text" style="min-width:280px;" />
                       <button type="submit">Yuborish</button>
                     </div>
                   </form>
@@ -1659,6 +1693,18 @@
     function closeSupportTicket(ticketId) {
       const dlg = document.getElementById(`ticket-${ticketId}`);
       if (dlg) dlg.close();
+    }
+
+    function applySavedReply(ticketId) {
+      const selectEl = document.getElementById(`reply_tpl_${ticketId}`);
+      const inputEl = document.getElementById(`reply_${ticketId}`);
+      if (!selectEl || !inputEl) return;
+      const selected = selectEl.options[selectEl.selectedIndex];
+      if (!selected) return;
+      const text = selected.getAttribute('data-text') || '';
+      if (text.trim().length > 0) {
+        inputEl.value = text;
+      }
     }
 
     {% if tab == 'support_tickets' and support_ticket_open %}
