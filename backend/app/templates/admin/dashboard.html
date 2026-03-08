@@ -1285,7 +1285,6 @@
                   <th>User</th>
                   <th>Aloqa</th>
                   <th>Manba</th>
-                  <th>Context</th>
                   <th>Mavzu</th>
                   <th>Status</th>
                   <th>Waiting</th>
@@ -1308,13 +1307,6 @@
                       {% if row.telegram_username %}<br/>@{{ row.telegram_username }}{% endif %}
                     </td>
                     <td>{{ row.source }}</td>
-                    <td>
-                      {% if row.context_summary %}
-                        {{ row.context_summary }}
-                      {% else %}
-                        -
-                      {% endif %}
-                    </td>
                     <td>{{ row.subject or '-' }}</td>
                     <td>
                       <span class="status-chip {% if row.status == 'open' %}chip-open{% elif row.status == 'in_progress' %}chip-progress{% else %}chip-closed{% endif %}">{{ row.status }}</span>
@@ -1362,7 +1354,6 @@
                   Phone: {{ row.phone or '-' }} |
                   Telegram chat: {{ row.telegram_chat_id or '-' }} |
                   Source: {{ row.source }} |
-                  Context: {{ row.context_summary or '-' }} |
                   Waiting on: <strong>{{ sla.get('waiting_on', '-') }}</strong> |
                   Pending: <strong>{{ sla.get('pending_minutes', 0) }} min</strong>
                 </div>

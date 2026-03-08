@@ -1156,7 +1156,6 @@ def admin_dashboard(request: Request):
                             SupportTicket.telegram_username.ilike(q_like),
                             SupportTicket.subject.ilike(q_like),
                             SupportTicket.message.ilike(q_like),
-                            SupportTicket.context_summary.ilike(q_like),
                         ]
                         if search_query_id is not None:
                             ticket_filters.extend(

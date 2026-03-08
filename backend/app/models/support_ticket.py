@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -29,8 +29,3 @@ class SupportTicket(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
-    context_trip_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    context_request_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    context_claim_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    context_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    context_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)

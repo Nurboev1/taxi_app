@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, support status+media ui simplification)
+Last updated: 2026-03-08 (Asia/Tashkent, removed 0017 dependency)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `500c64f`
+Main branch head (local before this handoff update): `a64b314`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -37,18 +37,15 @@ Main branch head (local before this handoff update): `500c64f`
   - topilgan user uchun 360 summary (support, notif, trips, requests, claims)
   - unified timeline (user/support/trip/request/claim/audit eventlar)
 - Telegram support oqimi kengaytirildi:
-  - Auto-context attach: har ticketga latest `trip/request/claim` context biriktiriladi
-  - Media evidence: bot endi `photo/video/voice/audio/document`ni ticket historyga metadata bilan saqlaydi
+  - Media evidence: bot `photo/video/voice/audio/document`ni qabul qiladi
   - Support chat media forward: user yuborgan media support kanaliga forward qilinadi
   - Login privacy: telefon/parol kirish xabarlari botda auto-delete (`TELEGRAM_SUPPORT_DELETE_SENSITIVE_MESSAGES=true`)
 - Admin `Support ticketlar` tabi kengaytirildi:
   - saved replies dropdown (`reply template`) qo'shildi
-  - ticket table/modalda context (`trip/request/claim`) ko'rinadi
   - media uchun panelda faqat "Photo/Video/..." yuborilgani haqidagi matn ko'rinadi
   - ticket statusi UIda qo'lda o'zgartirilmaydi (faqat user `/close` yoki 24h auto-close)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
-  - `backend/alembic/versions/0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`, `alembic_version` `varchar(32)` limitga mos)
 - Eslatma: productionda deploydan oldin:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`
@@ -382,7 +379,6 @@ Support ticket real oqimi:
 - Bitta user uchun aktiv (`open`/`in_progress`) ticketga xabar append qilinadi.
 - Ticketdagi barcha yozishmalar `support_ticket_messages`da saqlanadi (chat history).
 - Bot media xabarlarni ham qabul qiladi: `photo/video/voice/audio/document`.
-- Har yangi xabarda ticketga latest context attach qilinadi: `trip_id/request_id/claim_id`.
 - Login bosqichida telefon/parol xabarlari botdan auto-delete qilinadi (privacy).
 - User botdan `/close` yoki `Ticketni yopish` yuborsa ticket yopiladi.
 - Support javobidan keyin user 24 soat ichida yozmasa ticket avtomatik yopiladi.
@@ -424,7 +420,6 @@ Qila oladi:
 - Saved reply template tanlab tez javob yuborish (`support`/`superadmin`)
 - Ticket statusini qo'lda o'zgartirish admin panelda o'chirilgan
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
-- Ticket context (`trip/request/claim`) ko'rish
 - Media yuborilganini matn ko'rinishida ko'rish (photo/video/voice...)
 - Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
 - Overview intelligence panel:
@@ -456,7 +451,6 @@ Migrations:
 - `0014_ticket_messages.py`
 - `0015_request_seat_mix.py`
 - `0016_admin_audit_log_metadata.py`
-- `0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`)
 
 Asosiy jadvallar:
 - `users`
@@ -766,7 +760,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan oxirgi migrationlarni (`0017_support_ticket_ctx_media`gacha) productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0016_admin_audit_log_metadata`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose
