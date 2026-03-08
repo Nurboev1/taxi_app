@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, telegram support migration-id hotfix)
+Last updated: 2026-03-08 (Asia/Tashkent, telegram media deeplink button)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `4827913`
+Main branch head (local before this handoff update): `45709c2`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -44,6 +44,7 @@ Main branch head (local before this handoff update): `4827913`
   - saved replies dropdown (`reply template`) qo'shildi
   - ticket table/modalda context (`trip/request/claim`) ko'rinadi
   - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
+  - media message uchun `Telegramda ochish` tugmasi qo'shildi (support group message deep-link)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
   - `backend/alembic/versions/0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`, `alembic_version` `varchar(32)` limitga mos)
@@ -424,6 +425,7 @@ Qila oladi:
 - Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
 - Ticket context (`trip/request/claim`) va media metadata ko'rish
+- Media xabardan Telegram support groupdagi original postga o'tish (`Telegramda ochish` deep-link)
 - Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
 - Overview intelligence panel:
   - time window KPI (`24h/7d/30d/90d`)

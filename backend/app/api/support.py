@@ -4,6 +4,7 @@ import re
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.auth import _client_ip, _enforce_rate_limit
@@ -466,13 +467,14 @@ def telegram_webhook(
         ticket.message = preview_text
 
     context = _attach_ticket_context(db, ticket, user.id)
-    append_ticket_message(
+    initial_telegram_message_id = message_id if incoming_kind == "text" else None
+    appended_message = append_ticket_message(
         db=db,
         ticket=ticket,
         sender_role=SENDER_USER,
         message=preview_text,
         message_kind=incoming_kind,
-        telegram_message_id=message_id,
+        telegram_message_id=initial_telegram_message_id,
         media_file_id=media_file_id,
         media_file_unique_id=media_file_unique_id,
         media_mime_type=media_mime_type,
@@ -496,11 +498,24 @@ def telegram_webhook(
         support_chat_id = settings.telegram_support_chat_id.strip()
         if support_chat_id:
             try:
-                forward_bot_message(
+                forwarded = forward_bot_message(
                     to_chat_id=support_chat_id,
                     from_chat_id=chat_id,
                     message_id=message_id,
                 )
+                result = forwarded.get("result") if isinstance(forwarded, dict) else None
+                forwarded_message_id = (
+                    int(result.get("message_id"))
+                    if isinstance(result, dict) and isinstance(result.get("message_id"), int)
+                    else None
+                )
+                if forwarded_message_id is not None:
+                    appended_message.telegram_message_id = forwarded_message_id
+                    db.add(appended_message)
+                    try:
+                        db.commit()
+                    except SQLAlchemyError:
+                        db.rollback()
             except TelegramSupportError:
                 pass
     _reply(

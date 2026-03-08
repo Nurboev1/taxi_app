@@ -1403,6 +1403,11 @@
                       {% if msg.telegram_message_id %}
                         <div class="meta">Telegram msg id: {{ msg.telegram_message_id }}</div>
                       {% endif %}
+                      {% if support_media_chat_slug and msg.message_kind and msg.message_kind != 'text' and msg.telegram_message_id %}
+                        <div style="margin-top:6px;">
+                          <a class="btn-secondary" href="https://t.me/c/{{ support_media_chat_slug }}/{{ msg.telegram_message_id }}" target="_blank" rel="noopener">Telegramda ochish</a>
+                        </div>
+                      {% endif %}
                       <span class="chat-meta">{{ msg.sender_role }} | {{ msg.created_at }}</span>
                     </div>
                   {% endfor %}

@@ -297,6 +297,15 @@ def _parse_search_query(raw_query: str | None, fallback_kind: str) -> tuple[str,
     return query, fallback_kind
 
 
+def _telegram_chat_slug(chat_id: str | None) -> str | None:
+    raw = (chat_id or "").strip()
+    if raw.startswith("-100"):
+        candidate = raw[4:]
+        if candidate.isdigit():
+            return candidate
+    return None
+
+
 def _write_admin_audit_log(
     request: Request,
     db: Session,
@@ -615,6 +624,7 @@ def admin_dashboard(request: Request):
         audit_limit = max(20, min(audit_limit, 1000))
         support_tickets_status = request.query_params.get("support_tickets_status")
         support_ticket_open = request.query_params.get("support_ticket_open", "").strip()
+        support_media_chat_slug = _telegram_chat_slug(settings.telegram_support_chat_id)
         support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
         if support_ticket_filter not in {"all", "open", "in_progress", "closed"}:
             support_ticket_filter = "open"
@@ -1667,6 +1677,7 @@ def admin_dashboard(request: Request):
             "support_ticket_sla": support_ticket_sla,
             "support_sla_summary": support_sla_summary,
             "support_saved_replies": SUPPORT_SAVED_REPLIES,
+            "support_media_chat_slug": support_media_chat_slug,
             "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
