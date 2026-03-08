@@ -3,112 +3,498 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Dashboard</title>
+  <title>SafarUz Admin Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #f1f5f9;
-      --card: #fff;
-      --muted: #64748b;
-      --line: #e2e8f0;
+      --bg-0: #f7faf5;
+      --bg-1: #ebf8f2;
+      --bg-2: #dff1ea;
+      --ink-strong: #11201c;
+      --ink: #1f3a32;
+      --ink-muted: #4f7067;
+      --line: #c6ddd5;
+      --card: rgba(255, 255, 255, 0.92);
+      --card-alt: #f2faf7;
       --primary: #0f766e;
+      --primary-2: #0ea5a4;
+      --danger: #b91c1c;
+      --warn: #b45309;
+      --success: #15803d;
+      --radius: 18px;
+      --shadow: 0 24px 50px rgba(9, 47, 37, 0.14);
     }
-    body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: #0f172a; }
-    header {
-      background: #0f172a; color: #fff; padding: 14px 20px;
-      display: flex; justify-content: space-between; align-items: center;
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      color: var(--ink-strong);
+      background:
+        radial-gradient(circle at 12% 12%, rgba(14, 165, 164, 0.16), transparent 42%),
+        radial-gradient(circle at 88% 8%, rgba(15, 118, 110, 0.2), transparent 36%),
+        linear-gradient(165deg, var(--bg-0), var(--bg-1) 52%, var(--bg-2));
+      min-height: 100vh;
     }
-    a.btn { color: #fff; text-decoration: none; background: #334155; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
-    .wrap { padding: 18px; max-width: 1300px; margin: 0 auto; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .tab {
-      text-decoration: none; color: #0f172a; background: #e2e8f0;
-      padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 14px;
+
+    .shell {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
     }
-    .tab.active { background: #0f766e; color: #fff; }
-    .stats {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px; margin-bottom: 14px;
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      border: 1px solid rgba(198, 221, 213, 0.8);
+      background: linear-gradient(140deg, rgba(255, 255, 255, 0.88), rgba(232, 250, 244, 0.9));
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
     }
-    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-    .stat .k { color: var(--muted); font-size: 13px; }
-    .stat .v { margin-top: 6px; font-size: 24px; font-weight: 800; color: var(--primary); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .card h3 { margin: 0; padding: 12px; border-bottom: 1px solid var(--line); font-size: 15px; background: #f8fafc; }
-    .card .body { padding: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; }
-    .filters { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    input, button {
-      border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 13px;
+
+    .hero-title {
+      font-family: "Space Grotesk", "Manrope", sans-serif;
+      font-size: 26px;
+      margin: 0 0 6px;
+      letter-spacing: -0.02em;
+      color: var(--ink-strong);
     }
-    button { background: #0f766e; color: #fff; border-color: #0f766e; cursor: pointer; }
-    .btn-secondary { background: #334155; border-color: #334155; text-decoration: none; color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
-    dialog {
-      border: 0; border-radius: 12px; width: min(92vw, 560px); padding: 0; overflow: hidden;
-      box-shadow: 0 24px 64px rgba(0,0,0,.25);
+
+    .hero-sub {
+      margin: 0;
+      color: var(--ink-muted);
+      font-size: 14px;
     }
-    dialog::backdrop { background: rgba(0,0,0,.45); }
-    .modal-head { background: #0f172a; color: #fff; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .modal-head button { background: #ef4444; border-color: #ef4444; }
-    .modal-body { padding: 12px; max-height: 60vh; overflow: auto; }
-    .error { color: #b91c1c; font-weight: 600; margin-bottom: 10px; }
-    .meter { margin: 12px 0; }
-    .meter-top { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #334155; }
-    .bar { height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
-    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #0ea5e9, #0f766e); }
-    .meta { color: var(--muted); font-size: 13px; margin-top: 10px; }
-    .logbox {
-      background: #0b1220;
-      color: #dbeafe;
-      border-radius: 10px;
-      padding: 12px;
-      font-family: Consolas, Monaco, monospace;
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border-radius: 999px;
+      border: 1px solid #a7d7ca;
+      background: #e7f8f3;
+      color: #0a5f57;
+      padding: 6px 12px;
+      font-weight: 700;
       font-size: 12px;
-      white-space: pre-wrap;
-      max-height: 65vh;
-      overflow: auto;
-      border: 1px solid #1e293b;
+    }
+
+    .btn,
+    .btn-secondary,
+    button {
+      border: 0;
+      border-radius: 12px;
+      font-weight: 700;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn, button {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(14, 116, 109, 0.26);
+    }
+
+    .btn-secondary {
+      background: #e6f4f0;
+      color: #0d564d;
+      border: 1px solid #b8d9ce;
+      box-shadow: none;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #b91c1c, #dc2626);
+      color: #fff;
+      box-shadow: 0 10px 22px rgba(185, 28, 28, 0.24);
+    }
+
+    .btn:hover,
+    .btn-secondary:hover,
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      text-decoration: none;
+      border-radius: 999px;
+      border: 1px solid #c2ddd3;
+      background: rgba(255, 255, 255, 0.75);
+      padding: 8px 14px;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      transition: all .14s ease;
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #0f766e, #14b8a6);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 10px 22px rgba(15, 118, 110, 0.26);
+    }
+
+    .notice,
+    .ok,
+    .error {
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin-bottom: 12px;
+      border: 1px solid;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .notice {
+      color: #9a4d00;
+      border-color: #f4d5a6;
+      background: #fff8ef;
+    }
+
+    .ok {
+      color: #0f6a36;
+      border-color: #bde7cb;
+      background: #eefcf3;
+    }
+
+    .error {
+      color: #8e1414;
+      border-color: #f4c0c0;
+      background: #fff3f3;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      border-radius: 16px;
+      border: 1px solid #cae2d9;
+      background: linear-gradient(180deg, #ffffff, #f2faf6);
+      padding: 12px;
+      box-shadow: 0 12px 30px rgba(22, 89, 71, 0.08);
+      animation: rise .5s ease both;
+    }
+
+    .stat .k {
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .stat .v {
+      margin-top: 6px;
+      font-size: 28px;
+      font-weight: 800;
+      font-family: "Space Grotesk", "Manrope", sans-serif;
+      letter-spacing: -0.02em;
+      color: #0a4d45;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid #c7ded5;
+      border-radius: var(--radius);
+      background: var(--card);
+      backdrop-filter: blur(4px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card h3 {
+      margin: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid #d9ebe4;
+      font-size: 15px;
+      letter-spacing: .02em;
+      color: #12322c;
+      background: linear-gradient(135deg, #f8fffc, #e8f7f1);
+    }
+
+    .card .body { padding: 14px; }
+
+    .meta {
+      color: var(--ink-muted);
+      font-size: 12px;
+      margin-top: 8px;
       line-height: 1.45;
     }
-    .ok { color: #065f46; font-weight: 700; }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .filters label {
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    input,
+    select,
+    textarea {
+      border: 1px solid #c7ded4;
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fcfffd;
+      color: var(--ink-strong);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 0;
+      border-color: #34b9ab;
+      box-shadow: 0 0 0 3px rgba(52, 185, 171, 0.16);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 10px;
+      border-bottom: 1px solid #e6f1ed;
+      vertical-align: top;
+    }
+
+    th {
+      color: #43695f;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      background: #f7fcf9;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:hover { background: #f6fcf9; }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 72vh;
+      border: 1px solid #d8ebe3;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 4px 8px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .chip-open { color: #0b6a62; background: #e5fbf5; border-color: #9be6d5; }
+    .chip-progress { color: #0e4f80; background: #eaf4ff; border-color: #b2d4ff; }
+    .chip-closed { color: #616161; background: #f2f2f2; border-color: #d6d6d6; }
+    .chip-waiting-support { color: #8c3808; background: #fff1e7; border-color: #ffd3b5; }
+    .chip-waiting-user { color: #0f5f4f; background: #e9faf4; border-color: #bdeedb; }
+    .chip-escalated { color: #8a1f1f; background: #ffecec; border-color: #f8bcbc; }
+    .chip-breached { color: #8f1239; background: #ffe6ef; border-color: #f8b5cb; }
+
     .ticket-row { cursor: pointer; }
-    .ticket-row:hover { background: #f8fafc; }
+
+    .ticket-sla {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sla-box {
+      border-radius: 14px;
+      border: 1px solid #cfe4db;
+      background: linear-gradient(180deg, #ffffff, #f4fbf8);
+      padding: 10px 12px;
+    }
+
+    .sla-box .k {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #5d7e73;
+      font-weight: 800;
+    }
+
+    .sla-box .v {
+      margin-top: 6px;
+      font-size: 22px;
+      font-family: "Space Grotesk", "Manrope", sans-serif;
+      font-weight: 700;
+      color: #0c4f46;
+    }
+
+    .logbox {
+      background: #0f1f22;
+      color: #def5ee;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: "ui-monospace", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 64vh;
+      overflow: auto;
+      border: 1px solid #1d3d3b;
+      line-height: 1.45;
+    }
+
+    dialog {
+      border: 0;
+      border-radius: 18px;
+      width: min(96vw, 900px);
+      max-height: 92vh;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, .42);
+    }
+
+    dialog::backdrop { background: rgba(7, 19, 18, 0.52); }
+
+    .modal-head {
+      background: linear-gradient(135deg, #0f766e, #0d9488);
+      color: #fff;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-body {
+      padding: 14px;
+      background: #f7fcfa;
+      max-height: calc(92vh - 64px);
+      overflow: auto;
+    }
+
     .chat-wrap {
       display: flex;
       flex-direction: column;
       gap: 8px;
       margin: 10px 0 12px;
-      max-height: 45vh;
+      max-height: 50vh;
       overflow: auto;
       padding-right: 4px;
     }
+
     .chat-bubble {
       max-width: 88%;
       border-radius: 12px;
       padding: 8px 10px;
       white-space: pre-wrap;
       line-height: 1.35;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #d9ebe4;
       font-size: 13px;
+      background: #fff;
     }
-    .chat-user { align-self: flex-start; background: #f1f5f9; }
-    .chat-support { align-self: flex-end; background: #d1fae5; border-color: #a7f3d0; }
-    .chat-system { align-self: center; background: #fff7ed; border-color: #fed7aa; }
-    .chat-meta { display: block; margin-top: 4px; color: #64748b; font-size: 11px; }
+
+    .chat-user { align-self: flex-start; background: #eff8f4; }
+    .chat-support { align-self: flex-end; background: #e4f9f3; border-color: #b9e8d8; }
+    .chat-system { align-self: center; background: #fff4e9; border-color: #ffd6a7; }
+
+    .chat-meta {
+      display: block;
+      margin-top: 4px;
+      color: #5f7d74;
+      font-size: 11px;
+    }
+
+    details {
+      background: #f6faf8;
+      border: 1px solid #d7e9e2;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #24584d;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(8px); opacity: .4; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 860px) {
+      .hero { padding: 16px; flex-direction: column; }
+      .hero-actions { justify-content: flex-start; }
+      .grid { grid-template-columns: 1fr; }
+      .shell { padding: 14px 12px 24px; }
+      .stat .v { font-size: 24px; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <strong>SafarUz Admin | {{ admin_username }} ({{ admin_role_labels.get(admin_role, admin_role) }})</strong>
-    <a class="btn" href="/admin/logout">Chiqish</a>
-  </header>
-  <div class="wrap">
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <h1 class="hero-title">SafarUz Admin Control Center</h1>
+        <p class="hero-sub">{{ admin_username }} • {{ admin_role_labels.get(admin_role, admin_role) }} • real-time monitoring + ops panel</p>
+      </div>
+      <div class="hero-actions">
+        <span class="pill">Session: {{ admin_role }}</span>
+        <a class="btn-secondary" href="/admin/logout">Chiqish</a>
+      </div>
+    </header>
+
     {% if tab_forbidden %}
-      <div class="error">Sizning rolingiz bu bo'limga kira olmaydi.</div>
+      <div class="notice">Sizning rolingiz bu bo'limga kira olmaydi. Dashboardga qaytarildingiz.</div>
     {% endif %}
-    <div class="tabs">
+
+    <nav class="tabs">
       {% if 'overview' in tab_access %}<a class="tab {% if tab == 'overview' %}active{% endif %}" href="/admin?tab=overview">Dashboard</a>{% endif %}
       {% if 'trips' in tab_access %}<a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>{% endif %}
       {% if 'users' in tab_access %}<a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>{% endif %}
@@ -118,9 +504,9 @@
       {% if 'support_tickets' in tab_access %}<a class="tab {% if tab == 'support_tickets' %}active{% endif %}" href="/admin?tab=support_tickets">Support ticketlar</a>{% endif %}
       {% if 'security' in tab_access %}<a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>{% endif %}
       {% if 'admin_accounts' in tab_access %}<a class="tab {% if tab == 'admin_accounts' %}active{% endif %}" href="/admin?tab=admin_accounts">Admin accountlar</a>{% endif %}
-    </div>
+    </nav>
 
-    <div class="stats">
+    <section class="stats">
       <div class="stat"><div class="k">Foydalanuvchilar</div><div class="v">{{ stats.users_total }}</div></div>
       <div class="stat"><div class="k">Haydovchilar</div><div class="v">{{ stats.drivers_total }}</div></div>
       <div class="stat"><div class="k">Yo'lovchilar</div><div class="v">{{ stats.passengers_total }}</div></div>
@@ -130,44 +516,52 @@
       <div class="stat"><div class="k">Chatlar</div><div class="v">{{ stats.chats_total }}</div></div>
       <div class="stat"><div class="k">Xabarlar</div><div class="v">{{ stats.messages_total }}</div></div>
       <div class="stat"><div class="k">Baholar</div><div class="v">{{ stats.ratings_total }}</div></div>
-    </div>
+    </section>
 
     {% if tab == 'overview' %}
       <div class="grid">
         <section class="card">
           <h3>Oxirgi foydalanuvchilar</h3>
-          <table>
-            <thead><tr><th>ID</th><th>Ism</th><th>Telefon</th><th>Rol</th><th>Sana</th></tr></thead>
-            <tbody>
-              {% for u in recent_users %}
-                <tr>
-                  <td>{{ u.id }}</td>
-                  <td>{{ u.name }}</td>
-                  <td>{{ u.phone }}</td>
-                  <td>{{ u.role.value }}</td>
-                  <td>{{ u.created_at }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Ism</th><th>Telefon</th><th>Rol</th><th>Sana</th></tr></thead>
+                <tbody>
+                  {% for u in recent_users %}
+                    <tr>
+                      <td>{{ u.id }}</td>
+                      <td>{{ u.name }}</td>
+                      <td>{{ u.phone }}</td>
+                      <td>{{ u.role.value }}</td>
+                      <td>{{ u.created_at }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <section class="card">
           <h3>Oxirgi so'rovlar</h3>
-          <table>
-            <thead><tr><th>ID</th><th>Yo'nalish</th><th>O'rin</th><th>Status</th><th>Sana</th></tr></thead>
-            <tbody>
-              {% for r in recent_requests %}
-                <tr>
-                  <td>{{ r.id }}</td>
-                  <td>{{ r.from_location }} -> {{ r.to_location }}</td>
-                  <td>{{ r.seats_needed }}</td>
-                  <td>{{ r.status.value }}</td>
-                  <td>{{ r.created_at }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Yo'nalish</th><th>O'rin</th><th>Status</th><th>Sana</th></tr></thead>
+                <tbody>
+                  {% for r in recent_requests %}
+                    <tr>
+                      <td>{{ r.id }}</td>
+                      <td>{{ r.from_location }} -> {{ r.to_location }}</td>
+                      <td>{{ r.seats_needed }}</td>
+                      <td>{{ r.status.value }}</td>
+                      <td>{{ r.created_at }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
       </div>
     {% endif %}
@@ -178,39 +572,42 @@
         <div class="body">
           <form class="filters" method="get" action="/admin">
             <input type="hidden" name="tab" value="trips" />
-            <label for="trip_date"><strong>Sana:</strong></label>
+            <label for="trip_date">Sana:</label>
             <input id="trip_date" type="date" name="trip_date" value="{{ selected_trip_date }}" />
             <button type="submit">Filtrlash</button>
             <a class="btn-secondary" href="/admin?tab=trips">Tozalash</a>
           </form>
-          <table>
-            <thead>
-              <tr>
-                <th>Yo'lovchilar</th>
-                <th>Safar ID</th>
-                <th>Haydovchi ID</th>
-                <th>Haydovchi</th>
-                <th>Yo'nalish</th>
-                <th>Status</th>
-                <th>Boshlanish vaqti</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for t in trip_rows %}
+
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <button type="button" onclick="openPassengers({{ t.id }})">Yo'lovchilarni ko'rsatish</button>
-                  </td>
-                  <td>{{ t.id }}</td>
-                  <td>{{ t.driver_id }}</td>
-                  <td>{{ t.driver_name }} ({{ t.driver_first_name or '-' }} {{ t.driver_last_name or '-' }})</td>
-                  <td>{{ t.from_location }} -> {{ t.to_location }}</td>
-                  <td>{{ t.status }}</td>
-                  <td>{{ t.start_time }}</td>
+                  <th>Yo'lovchilar</th>
+                  <th>Safar ID</th>
+                  <th>Haydovchi ID</th>
+                  <th>Haydovchi</th>
+                  <th>Yo'nalish</th>
+                  <th>Status</th>
+                  <th>Boshlanish</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for t in trip_rows %}
+                  <tr>
+                    <td>
+                      <button type="button" onclick="openPassengers({{ t.id }})">Yo'lovchilar</button>
+                    </td>
+                    <td>{{ t.id }}</td>
+                    <td>{{ t.driver_id }}</td>
+                    <td>{{ t.driver_name }} ({{ t.driver_first_name or '-' }} {{ t.driver_last_name or '-' }})</td>
+                    <td>{{ t.from_location }} -> {{ t.to_location }}</td>
+                    <td>{{ t.status }}</td>
+                    <td>{{ t.start_time }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
           {% for t in trip_rows %}
             <dialog id="pax-{{ t.id }}">
@@ -220,20 +617,22 @@
               </div>
               <div class="modal-body">
                 {% if t.passengers %}
-                  <table>
-                    <thead><tr><th>User ID</th><th>Ism</th><th>Jins</th><th>Request ID</th><th>Claim</th></tr></thead>
-                    <tbody>
-                      {% for p in t.passengers %}
-                        <tr>
-                          <td>{{ p.id }}</td>
-                          <td>{{ p.name }}</td>
-                          <td>{{ p.gender }}</td>
-                          <td>{{ p.request_id }}</td>
-                          <td>{{ p.claim_status }}</td>
-                        </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
+                  <div class="table-wrap">
+                    <table>
+                      <thead><tr><th>User ID</th><th>Ism</th><th>Jins</th><th>Request ID</th><th>Claim</th></tr></thead>
+                      <tbody>
+                        {% for p in t.passengers %}
+                          <tr>
+                            <td>{{ p.id }}</td>
+                            <td>{{ p.name }}</td>
+                            <td>{{ p.gender }}</td>
+                            <td>{{ p.request_id }}</td>
+                            <td>{{ p.claim_status }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
                 {% else %}
                   <p>Bu safarda yo'lovchilar topilmadi.</p>
                 {% endif %}
@@ -250,7 +649,7 @@
         <div class="body">
           <form class="filters" method="get" action="/admin">
             <input type="hidden" name="tab" value="users" />
-            <label for="user_id"><strong>User ID:</strong></label>
+            <label for="user_id">User ID:</label>
             <input id="user_id" type="number" name="user_id" value="{{ lookup_user_id }}" placeholder="Masalan: 12" />
             <button type="submit">Qidirish</button>
           </form>
@@ -258,48 +657,50 @@
             <div class="error">{{ lookup_error }}</div>
           {% endif %}
           {% if lookup_user %}
-            <table>
-              <tbody>
-                <tr><th>ID</th><td>{{ lookup_user.id }}</td></tr>
-                <tr><th>Ism</th><td>{{ lookup_user.name }}</td></tr>
-                <tr><th>First name</th><td>{{ lookup_user.first_name or '-' }}</td></tr>
-                <tr><th>Last name</th><td>{{ lookup_user.last_name or '-' }}</td></tr>
-                <tr><th>Telefon</th><td>{{ lookup_user.phone }}</td></tr>
-                <tr><th>Parol o'rnatilganmi</th><td>{{ 'Ha' if lookup_user.password_hash else "Yo'q" }}</td></tr>
-                <tr><th>Rol</th><td>{{ lookup_user.role.value }}</td></tr>
-                <tr><th>Jins</th><td>{{ lookup_user.gender.value if lookup_user.gender else '-' }}</td></tr>
-                <tr><th>Yosh</th><td>{{ lookup_user.age if lookup_user.age is not none else '-' }}</td></tr>
-                <tr><th>Til</th><td>{{ lookup_user.language.value if lookup_user.language else '-' }}</td></tr>
-                <tr><th>Telefon ko'rinishi</th><td>{{ lookup_user.phone_visible }}</td></tr>
-                <tr><th>Mashina modeli</th><td>{{ lookup_user.car_model or '-' }}</td></tr>
-                <tr><th>Mashina raqami</th><td>{{ lookup_user.car_number or '-' }}</td></tr>
-                <tr><th>Driver blocked</th><td>{{ lookup_user.driver_blocked }}</td></tr>
-                <tr><th>Driver override</th><td>{{ lookup_user.driver_access_override }}</td></tr>
-                <tr><th>Driver block sababi</th><td>{{ lookup_user.driver_block_reason or '-' }}</td></tr>
-                <tr><th>Driver unblock vaqti</th><td>{{ lookup_user.driver_unblocked_at or '-' }}</td></tr>
-                <tr><th>FCM token</th><td>{{ lookup_user.fcm_token or '-' }}</td></tr>
-                <tr><th>Ro'yxatdan o'tgan</th><td>{{ lookup_user.created_at }}</td></tr>
-                <tr><th>Haydovchi safarlari (jami)</th><td>{{ lookup_user_stats.driver_trips_total }}</td></tr>
-                <tr><th>Haydovchi safarlari (faol)</th><td>{{ lookup_user_stats.driver_trips_active }}</td></tr>
-                <tr><th>Haydovchi safarlari (yakunlangan)</th><td>{{ lookup_user_stats.driver_trips_done }}</td></tr>
-                <tr><th>Yo'lovchi so'rovlari</th><td>{{ lookup_user_stats.passenger_requests }}</td></tr>
-                <tr><th>Yo'lovchi so'rovlari (faol)</th><td>{{ lookup_user_stats.passenger_requests_active }}</td></tr>
-                <tr><th>Claimlar (jami)</th><td>{{ lookup_user_stats.claims_total }}</td></tr>
-                <tr><th>Claimlar (pending)</th><td>{{ lookup_user_stats.claims_pending }}</td></tr>
-                <tr><th>Claimlar (accepted)</th><td>{{ lookup_user_stats.claims_accepted }}</td></tr>
-                <tr><th>Claimlar (rejected)</th><td>{{ lookup_user_stats.claims_rejected }}</td></tr>
-                <tr><th>Claimlar (completed)</th><td>{{ lookup_user_stats.claims_completed }}</td></tr>
-                <tr><th>Berilgan baholar</th><td>{{ lookup_user_stats.given_ratings }}</td></tr>
-                <tr><th>Berilgan baholar o'rtachasi</th><td>{{ lookup_user_stats.given_ratings_avg }}</td></tr>
-                <tr><th>Olgan baholar</th><td>{{ lookup_user_stats.received_ratings }}</td></tr>
-                <tr><th>Olgan baholar o'rtachasi</th><td>{{ lookup_user_stats.received_ratings_avg }}</td></tr>
-                <tr><th>Chatlar (driver)</th><td>{{ lookup_user_stats.chats_as_driver }}</td></tr>
-                <tr><th>Chatlar (passenger)</th><td>{{ lookup_user_stats.chats_as_passenger }}</td></tr>
-                <tr><th>Yuborgan xabarlar</th><td>{{ lookup_user_stats.messages_sent }}</td></tr>
-                <tr><th>Bildirishnomalar (jami)</th><td>{{ lookup_user_stats.notifications_total }}</td></tr>
-                <tr><th>Bildirishnomalar (o'qilmagan)</th><td>{{ lookup_user_stats.notifications_unread }}</td></tr>
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <tbody>
+                  <tr><th>ID</th><td>{{ lookup_user.id }}</td></tr>
+                  <tr><th>Ism</th><td>{{ lookup_user.name }}</td></tr>
+                  <tr><th>First name</th><td>{{ lookup_user.first_name or '-' }}</td></tr>
+                  <tr><th>Last name</th><td>{{ lookup_user.last_name or '-' }}</td></tr>
+                  <tr><th>Telefon</th><td>{{ lookup_user.phone }}</td></tr>
+                  <tr><th>Parol o'rnatilganmi</th><td>{{ 'Ha' if lookup_user.password_hash else "Yo'q" }}</td></tr>
+                  <tr><th>Rol</th><td>{{ lookup_user.role.value }}</td></tr>
+                  <tr><th>Jins</th><td>{{ lookup_user.gender.value if lookup_user.gender else '-' }}</td></tr>
+                  <tr><th>Yosh</th><td>{{ lookup_user.age if lookup_user.age is not none else '-' }}</td></tr>
+                  <tr><th>Til</th><td>{{ lookup_user.language.value if lookup_user.language else '-' }}</td></tr>
+                  <tr><th>Telefon ko'rinishi</th><td>{{ lookup_user.phone_visible }}</td></tr>
+                  <tr><th>Mashina modeli</th><td>{{ lookup_user.car_model or '-' }}</td></tr>
+                  <tr><th>Mashina raqami</th><td>{{ lookup_user.car_number or '-' }}</td></tr>
+                  <tr><th>Driver blocked</th><td>{{ lookup_user.driver_blocked }}</td></tr>
+                  <tr><th>Driver override</th><td>{{ lookup_user.driver_access_override }}</td></tr>
+                  <tr><th>Driver block sababi</th><td>{{ lookup_user.driver_block_reason or '-' }}</td></tr>
+                  <tr><th>Driver unblock vaqti</th><td>{{ lookup_user.driver_unblocked_at or '-' }}</td></tr>
+                  <tr><th>FCM token</th><td>{{ lookup_user.fcm_token or '-' }}</td></tr>
+                  <tr><th>Ro'yxatdan o'tgan</th><td>{{ lookup_user.created_at }}</td></tr>
+                  <tr><th>Haydovchi safarlari (jami)</th><td>{{ lookup_user_stats.driver_trips_total }}</td></tr>
+                  <tr><th>Haydovchi safarlari (faol)</th><td>{{ lookup_user_stats.driver_trips_active }}</td></tr>
+                  <tr><th>Haydovchi safarlari (yakunlangan)</th><td>{{ lookup_user_stats.driver_trips_done }}</td></tr>
+                  <tr><th>Yo'lovchi so'rovlari</th><td>{{ lookup_user_stats.passenger_requests }}</td></tr>
+                  <tr><th>Yo'lovchi so'rovlari (faol)</th><td>{{ lookup_user_stats.passenger_requests_active }}</td></tr>
+                  <tr><th>Claimlar (jami)</th><td>{{ lookup_user_stats.claims_total }}</td></tr>
+                  <tr><th>Claimlar (pending)</th><td>{{ lookup_user_stats.claims_pending }}</td></tr>
+                  <tr><th>Claimlar (accepted)</th><td>{{ lookup_user_stats.claims_accepted }}</td></tr>
+                  <tr><th>Claimlar (rejected)</th><td>{{ lookup_user_stats.claims_rejected }}</td></tr>
+                  <tr><th>Claimlar (completed)</th><td>{{ lookup_user_stats.claims_completed }}</td></tr>
+                  <tr><th>Berilgan baholar</th><td>{{ lookup_user_stats.given_ratings }}</td></tr>
+                  <tr><th>Berilgan baholar o'rtachasi</th><td>{{ lookup_user_stats.given_ratings_avg }}</td></tr>
+                  <tr><th>Olgan baholar</th><td>{{ lookup_user_stats.received_ratings }}</td></tr>
+                  <tr><th>Olgan baholar o'rtachasi</th><td>{{ lookup_user_stats.received_ratings_avg }}</td></tr>
+                  <tr><th>Chatlar (driver)</th><td>{{ lookup_user_stats.chats_as_driver }}</td></tr>
+                  <tr><th>Chatlar (passenger)</th><td>{{ lookup_user_stats.chats_as_passenger }}</td></tr>
+                  <tr><th>Yuborgan xabarlar</th><td>{{ lookup_user_stats.messages_sent }}</td></tr>
+                  <tr><th>Bildirishnomalar (jami)</th><td>{{ lookup_user_stats.notifications_total }}</td></tr>
+                  <tr><th>Bildirishnomalar (o'qilmagan)</th><td>{{ lookup_user_stats.notifications_unread }}</td></tr>
+                </tbody>
+              </table>
+            </div>
           {% endif %}
         </div>
       </section>
@@ -311,7 +712,7 @@
         <div class="body">
           <form class="filters" method="get" action="/admin">
             <input type="hidden" name="tab" value="driver_access" />
-            <label for="driver_access_user_id"><strong>User ID:</strong></label>
+            <label for="driver_access_user_id">User ID:</label>
             <input id="driver_access_user_id" type="number" name="driver_access_user_id" value="{{ driver_access_user_id }}" placeholder="Masalan: 12" />
             <button type="submit">Qidirish</button>
           </form>
@@ -319,30 +720,31 @@
           {% if driver_access_error %}
             <div class="error">{{ driver_access_error }}</div>
           {% endif %}
-
           {% if driver_access_status %}
-            <div><strong>Status:</strong> {{ driver_access_status }}</div>
+            <div class="notice">Status: {{ driver_access_status }}</div>
           {% endif %}
 
           {% if driver_access_user %}
-            <table>
-              <tbody>
-                <tr><th>ID</th><td>{{ driver_access_user.id }}</td></tr>
-                <tr><th>Ism</th><td>{{ driver_access_user.name }}</td></tr>
-                <tr><th>Telefon</th><td>{{ driver_access_user.phone }}</td></tr>
-                <tr><th>Rol</th><td>{{ driver_access_user.role.value }}</td></tr>
-                <tr><th>Driver blocked</th><td>{{ driver_access_user.driver_blocked }}</td></tr>
-                <tr><th>Override</th><td>{{ driver_access_user.driver_access_override }}</td></tr>
-                <tr><th>Sabab</th><td>{{ driver_access_user.driver_block_reason or '-' }}</td></tr>
-                <tr><th>Unblock vaqti</th><td>{{ driver_access_user.driver_unblocked_at or '-' }}</td></tr>
-                <tr><th>Ro'yxatdan o'tgan</th><td>{{ driver_access_user.created_at }}</td></tr>
-              </tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <tbody>
+                  <tr><th>ID</th><td>{{ driver_access_user.id }}</td></tr>
+                  <tr><th>Ism</th><td>{{ driver_access_user.name }}</td></tr>
+                  <tr><th>Telefon</th><td>{{ driver_access_user.phone }}</td></tr>
+                  <tr><th>Rol</th><td>{{ driver_access_user.role.value }}</td></tr>
+                  <tr><th>Driver blocked</th><td>{{ driver_access_user.driver_blocked }}</td></tr>
+                  <tr><th>Override</th><td>{{ driver_access_user.driver_access_override }}</td></tr>
+                  <tr><th>Sabab</th><td>{{ driver_access_user.driver_block_reason or '-' }}</td></tr>
+                  <tr><th>Unblock vaqti</th><td>{{ driver_access_user.driver_unblocked_at or '-' }}</td></tr>
+                  <tr><th>Ro'yxatdan o'tgan</th><td>{{ driver_access_user.created_at }}</td></tr>
+                </tbody>
+              </table>
+            </div>
             <div class="filters" style="margin-top:12px;">
               <form method="post" action="/admin/driver-access">
                 <input type="hidden" name="user_id" value="{{ driver_access_user.id }}" />
                 <input type="hidden" name="action" value="block" />
-                <button type="submit" style="background:#b91c1c;border-color:#b91c1c;">Bloklash</button>
+                <button class="btn-danger" type="submit">Bloklash</button>
               </form>
               <form method="post" action="/admin/driver-access">
                 <input type="hidden" name="user_id" value="{{ driver_access_user.id }}" />
@@ -360,35 +762,18 @@
         <h3>Server resurslari</h3>
         <div class="body">
           {% if resource_metrics.available %}
-            <div class="meta"><strong>Scope:</strong> {{ resource_metrics.scope }}</div>
-            <div class="meter">
-              <div class="meter-top">
-                <strong>CPU</strong>
-                <span>{{ resource_metrics.cpu_percent }}%</span>
-              </div>
-              <div class="bar"><span style="width: {{ resource_metrics.cpu_percent }}%"></span></div>
-              <div class="meta">
-                Logical core: {{ resource_metrics.cpu_cores_logical }}, Physical core: {{ resource_metrics.cpu_cores_physical }}
-                {% if resource_metrics.cpu_limit_cores is not none %}
-                  , Container limit: {{ resource_metrics.cpu_limit_cores }} core
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="meter">
-              <div class="meter-top">
-                <strong>RAM</strong>
-                <span>{{ resource_metrics.memory_percent }}% ({{ resource_metrics.memory_used_gb }} / {{ resource_metrics.memory_total_gb }} GB)</span>
-              </div>
-              <div class="bar"><span style="width: {{ resource_metrics.memory_percent }}%"></span></div>
-            </div>
-
-            <div class="meter">
-              <div class="meter-top">
-                <strong>Disk</strong>
-                <span>{{ resource_metrics.disk_percent }}% ({{ resource_metrics.disk_used_gb }} / {{ resource_metrics.disk_total_gb }} GB)</span>
-              </div>
-              <div class="bar"><span style="width: {{ resource_metrics.disk_percent }}%"></span></div>
+            <div class="notice">Scope: <strong>{{ resource_metrics.scope }}</strong></div>
+            <div class="table-wrap">
+              <table>
+                <tbody>
+                  <tr><th>CPU</th><td>{{ resource_metrics.cpu_percent }}%</td></tr>
+                  <tr><th>Logical core</th><td>{{ resource_metrics.cpu_cores_logical }}</td></tr>
+                  <tr><th>Physical core</th><td>{{ resource_metrics.cpu_cores_physical }}</td></tr>
+                  <tr><th>Container core limit</th><td>{{ resource_metrics.cpu_limit_cores if resource_metrics.cpu_limit_cores is not none else '-' }}</td></tr>
+                  <tr><th>RAM</th><td>{{ resource_metrics.memory_percent }}% ({{ resource_metrics.memory_used_gb }} / {{ resource_metrics.memory_total_gb }} GB)</td></tr>
+                  <tr><th>Disk</th><td>{{ resource_metrics.disk_percent }}% ({{ resource_metrics.disk_used_gb }} / {{ resource_metrics.disk_total_gb }} GB)</td></tr>
+                </tbody>
+              </table>
             </div>
           {% else %}
             <div class="error">{{ resource_metrics.error }}</div>
@@ -403,9 +788,9 @@
         <div class="body">
           <form class="filters" method="get" action="/admin">
             <input type="hidden" name="tab" value="errors" />
-            <label for="error_service"><strong>Service:</strong></label>
+            <label for="error_service">Service:</label>
             <input id="error_service" name="error_service" value="{{ error_service }}" placeholder="Masalan: safaruz-backend" />
-            <label for="error_lines"><strong>Qator:</strong></label>
+            <label for="error_lines">Qator:</label>
             <input id="error_lines" type="number" name="error_lines" min="50" max="2000" value="{{ error_lines }}" />
             <button type="submit">Yangilash</button>
           </form>
@@ -432,7 +817,7 @@
 
     {% if tab == 'support_tickets' %}
       <section class="card">
-        <h3>Support ticketlar</h3>
+        <h3>Support ticketlar + SLA</h3>
         <div class="body">
           {% if support_tickets_error %}
             <div class="error">{{ support_tickets_error }}</div>
@@ -440,6 +825,8 @@
 
           {% if support_tickets_status == 'replied' %}
             <div class="ok">Javob yuborildi.</div>
+          {% elif support_tickets_status == 'updated' %}
+            <div class="ok">Ticket statusi yangilandi.</div>
           {% elif support_tickets_status == 'empty_reply' %}
             <div class="error">Javob matni bo'sh bo'lmasin.</div>
           {% elif support_tickets_status == 'not_found' %}
@@ -452,16 +839,22 @@
             <div class="error">Telegramga yuborishda xato bo'ldi.</div>
           {% elif support_tickets_status == 'db_error' %}
             <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
+          {% elif support_tickets_status == 'invalid_status' %}
+            <div class="error">Status noto'g'ri qiymatda yuborildi.</div>
           {% endif %}
+
+          <div class="ticket-sla">
+            <div class="sla-box"><div class="k">Open Tickets</div><div class="v">{{ support_sla_summary.open_total }}</div></div>
+            <div class="sla-box"><div class="k">Waiting Support</div><div class="v">{{ support_sla_summary.waiting_support }}</div></div>
+            <div class="sla-box"><div class="k">Waiting User</div><div class="v">{{ support_sla_summary.waiting_user }}</div></div>
+            <div class="sla-box"><div class="k">Escalated (30m+)</div><div class="v">{{ support_sla_summary.escalated }}</div></div>
+            <div class="sla-box"><div class="k">24h Breach</div><div class="v">{{ support_sla_summary.breached }}</div></div>
+          </div>
 
           <form class="filters" method="get" action="/admin">
             <input type="hidden" name="tab" value="support_tickets" />
-            <label for="support_ticket_filter"><strong>Status:</strong></label>
-            <select
-              id="support_ticket_filter"
-              name="support_ticket_filter"
-              style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;"
-            >
+            <label for="support_ticket_filter">Status:</label>
+            <select id="support_ticket_filter" name="support_ticket_filter">
               <option value="open" {% if support_ticket_filter == 'open' %}selected{% endif %}>open</option>
               <option value="in_progress" {% if support_ticket_filter == 'in_progress' %}selected{% endif %}>in_progress</option>
               <option value="closed" {% if support_ticket_filter == 'closed' %}selected{% endif %}>closed</option>
@@ -470,44 +863,70 @@
             <button type="submit">Filtrlash</button>
           </form>
 
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Vaqt</th>
-                <th>User</th>
-                <th>Aloqa</th>
-                <th>Manba</th>
-                <th>Mavzu</th>
-                <th>Status</th>
-                <th>Oxirgi xabar</th>
-                <th>Ochish</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in support_tickets %}
-                <tr class="ticket-row" onclick="openSupportTicket({{ row.id }})">
-                  <td>{{ row.id }}</td>
-                  <td>{{ row.created_at }}</td>
-                  <td>{{ row.user_id or '-' }}</td>
-                  <td>
-                    {{ row.phone or '-' }}
-                    {% if row.telegram_chat_id %}
-                      <br/>chat: {{ row.telegram_chat_id }}
-                    {% endif %}
-                    {% if row.telegram_username %}
-                      <br/>@{{ row.telegram_username }}
-                    {% endif %}
-                  </td>
-                  <td>{{ row.source }}</td>
-                  <td>{{ row.subject or '-' }}</td>
-                  <td><strong>{{ row.status }}</strong></td>
-                  <td style="max-width:280px; white-space: pre-wrap;">{{ row.message }}</td>
-                  <td><button type="button" onclick="event.stopPropagation(); openSupportTicket({{ row.id }})">Ochish</button></td>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Vaqt</th>
+                  <th>User</th>
+                  <th>Aloqa</th>
+                  <th>Manba</th>
+                  <th>Mavzu</th>
+                  <th>Status</th>
+                  <th>Waiting</th>
+                  <th>Pending</th>
+                  <th>Auto-close</th>
+                  <th>Oxirgi xabar</th>
+                  <th>Ochish</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for row in support_tickets %}
+                  {% set sla = support_ticket_sla.get(row.id, {}) %}
+                  <tr class="ticket-row" onclick="openSupportTicket({{ row.id }})">
+                    <td>#{{ row.id }}</td>
+                    <td>{{ row.created_at }}</td>
+                    <td>{{ row.user_id or '-' }}</td>
+                    <td>
+                      {{ row.phone or '-' }}
+                      {% if row.telegram_chat_id %}<br/>chat: {{ row.telegram_chat_id }}{% endif %}
+                      {% if row.telegram_username %}<br/>@{{ row.telegram_username }}{% endif %}
+                    </td>
+                    <td>{{ row.source }}</td>
+                    <td>{{ row.subject or '-' }}</td>
+                    <td>
+                      <span class="status-chip {% if row.status == 'open' %}chip-open{% elif row.status == 'in_progress' %}chip-progress{% else %}chip-closed{% endif %}">{{ row.status }}</span>
+                      {% if sla.get('breached') %}
+                        <span class="status-chip chip-breached">breached</span>
+                      {% elif sla.get('escalated') %}
+                        <span class="status-chip chip-escalated">escalated</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if sla.get('waiting_on') == 'support' %}
+                        <span class="status-chip chip-waiting-support">Support</span>
+                      {% elif sla.get('waiting_on') == 'user' %}
+                        <span class="status-chip chip-waiting-user">User</span>
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>{{ sla.get('pending_minutes', 0) }} min</td>
+                    <td>
+                      {% if sla.get('auto_close_minutes_left') is not none %}
+                        {{ sla.get('auto_close_minutes_left') }} min
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td style="max-width:280px; white-space: pre-wrap;">{{ row.message }}</td>
+                    <td><button type="button" onclick="event.stopPropagation(); openSupportTicket({{ row.id }})">Ochish</button></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
           {% for row in support_tickets %}
             <dialog id="ticket-{{ row.id }}">
@@ -516,12 +935,30 @@
                 <button type="button" onclick="closeSupportTicket({{ row.id }})">Yopish</button>
               </div>
               <div class="modal-body">
+                {% set sla = support_ticket_sla.get(row.id, {}) %}
                 <div class="meta">
                   User ID: {{ row.user_id or '-' }} |
                   Phone: {{ row.phone or '-' }} |
                   Telegram chat: {{ row.telegram_chat_id or '-' }} |
-                  Source: {{ row.source }}
+                  Source: {{ row.source }} |
+                  Waiting on: <strong>{{ sla.get('waiting_on', '-') }}</strong> |
+                  Pending: <strong>{{ sla.get('pending_minutes', 0) }} min</strong>
                 </div>
+
+                {% if admin_role == 'superadmin' and row.status != 'closed' %}
+                  <form class="filters" method="post" action="/admin/support-tickets/status" style="margin-top:10px;">
+                    <input type="hidden" name="ticket_id" value="{{ row.id }}" />
+                    <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
+                    <label for="status_{{ row.id }}">Status:</label>
+                    <select id="status_{{ row.id }}" name="new_status">
+                      <option value="open" {% if row.status == 'open' %}selected{% endif %}>open</option>
+                      <option value="in_progress" {% if row.status == 'in_progress' %}selected{% endif %}>in_progress</option>
+                      <option value="closed" {% if row.status == 'closed' %}selected{% endif %}>closed</option>
+                    </select>
+                    <button type="submit">Statusni saqlash</button>
+                  </form>
+                {% endif %}
+
                 <div class="chat-wrap">
                   {% for msg in support_ticket_messages.get(row.id, []) %}
                     <div class="chat-bubble {% if msg.sender_role == 'support' %}chat-support{% elif msg.sender_role == 'system' %}chat-system{% else %}chat-user{% endif %}">
@@ -536,7 +973,7 @@
                     <input type="hidden" name="ticket_id" value="{{ row.id }}" />
                     <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
                     <div class="filters">
-                      <label for="reply_{{ row.id }}"><strong>Javob:</strong></label>
+                      <label for="reply_{{ row.id }}">Javob:</label>
                       <input id="reply_{{ row.id }}" name="reply_text" style="min-width:280px;" required />
                       <button type="submit">Yuborish</button>
                     </div>
@@ -549,7 +986,7 @@
           {% endfor %}
 
           {% if not support_tickets %}
-            <div class="meta">Hozircha support ticket yo'q.</div>
+            <div class="notice">Hozircha support ticket yo'q.</div>
           {% endif %}
         </div>
       </section>
@@ -573,15 +1010,15 @@
 
           <form method="post" action="/admin/change-password">
             <div class="filters">
-              <label for="current_password"><strong>Joriy parol:</strong></label>
+              <label for="current_password">Joriy parol:</label>
               <input id="current_password" name="current_password" type="password" required />
             </div>
             <div class="filters">
-              <label for="new_password"><strong>Yangi parol:</strong></label>
+              <label for="new_password">Yangi parol:</label>
               <input id="new_password" name="new_password" type="password" minlength="8" required />
             </div>
             <div class="filters">
-              <label for="new_password_confirm"><strong>Yangi parol (qayta):</strong></label>
+              <label for="new_password_confirm">Yangi parol (qayta):</label>
               <input id="new_password_confirm" name="new_password_confirm" type="password" minlength="8" required />
             </div>
             <button type="submit">Parolni yangilash</button>
@@ -592,7 +1029,7 @@
 
     {% if tab == 'admin_accounts' %}
       <section class="card">
-        <h3>Role bilan admin account yaratish</h3>
+        <h3>Admin accountlar + audit log</h3>
         <div class="body">
           {% if admin_accounts_error %}
             <div class="error">{{ admin_accounts_error }}</div>
@@ -631,93 +1068,158 @@
             <div class="error">Yangi parol kamida 8 belgi (maks 72 bayt) bo'lishi kerak.</div>
           {% endif %}
 
-          <form method="post" action="/admin/admin-accounts/create">
-            <div class="filters">
-              <label for="new_admin_username"><strong>Login:</strong></label>
-              <input id="new_admin_username" name="username" required />
-            </div>
-            <div class="filters">
-              <label for="new_admin_role"><strong>Rol:</strong></label>
-              <select id="new_admin_role" name="role" style="border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;">
-                <option value="support">Support</option>
-                <option value="ops">Ops</option>
-                <option value="superadmin">Superadmin</option>
-              </select>
-            </div>
-            <div class="filters">
-              <label for="new_admin_password"><strong>Parol:</strong></label>
-              <input id="new_admin_password" name="password" type="password" minlength="8" required />
-            </div>
-            <div class="filters">
-              <label for="new_admin_password_confirm"><strong>Parol (qayta):</strong></label>
-              <input id="new_admin_password_confirm" name="password_confirm" type="password" minlength="8" required />
-            </div>
-            <button type="submit">Account yaratish</button>
-          </form>
+          <div class="grid" style="margin-bottom: 12px;">
+            <section class="card">
+              <h3>Role bilan admin account yaratish</h3>
+              <div class="body">
+                <form method="post" action="/admin/admin-accounts/create">
+                  <div class="filters">
+                    <label for="new_admin_username">Login:</label>
+                    <input id="new_admin_username" name="username" required />
+                  </div>
+                  <div class="filters">
+                    <label for="new_admin_role">Rol:</label>
+                    <select id="new_admin_role" name="role">
+                      <option value="support">Support</option>
+                      <option value="ops">Ops</option>
+                      <option value="superadmin">Superadmin</option>
+                    </select>
+                  </div>
+                  <div class="filters">
+                    <label for="new_admin_password">Parol:</label>
+                    <input id="new_admin_password" name="password" type="password" minlength="8" required />
+                  </div>
+                  <div class="filters">
+                    <label for="new_admin_password_confirm">Parol (qayta):</label>
+                    <input id="new_admin_password_confirm" name="password_confirm" type="password" minlength="8" required />
+                  </div>
+                  <button type="submit">Account yaratish</button>
+                </form>
+              </div>
+            </section>
 
-          <div class="meta" style="margin-top:16px;">Mavjud admin accountlar:</div>
-          <table>
-            <thead>
-              <tr><th>Login</th><th>Rol</th><th>Faol</th><th>Yaratgan</th><th>Yaratilgan</th><th>Yangilangan</th><th>Amal</th></tr>
-            </thead>
-            <tbody>
-              {% for a in admin_accounts %}
-                <tr>
-                  <td>{{ a.username }}</td>
-                  <td>{{ admin_role_labels.get(a.role, a.role) }}</td>
-                  <td>{{ a.is_active }}</td>
-                  <td>{{ a.created_by or '-' }}</td>
-                  <td>{{ a.created_at }}</td>
-                  <td>{{ a.updated_at }}</td>
-                  <td>
-                    <form method="post" action="/admin/admin-accounts/toggle-active">
-                      <input type="hidden" name="username" value="{{ a.username }}" />
-                      {% if a.is_active %}
-                        <button type="submit" style="background:#b91c1c;border-color:#b91c1c;">Deactivate</button>
-                      {% else %}
-                        <button type="submit">Activate</button>
-                      {% endif %}
-                    </form>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+            <section class="card">
+              <h3>Admin parolini reset qilish</h3>
+              <div class="body">
+                <form method="post" action="/admin/admin-accounts/reset-password">
+                  <div class="filters">
+                    <label for="reset_admin_username">Login:</label>
+                    <input id="reset_admin_username" name="username" required />
+                  </div>
+                  <div class="filters">
+                    <label for="reset_admin_password">Yangi parol:</label>
+                    <input id="reset_admin_password" name="new_password" type="password" minlength="8" required />
+                  </div>
+                  <div class="filters">
+                    <label for="reset_admin_password_confirm">Yangi parol (qayta):</label>
+                    <input id="reset_admin_password_confirm" name="new_password_confirm" type="password" minlength="8" required />
+                  </div>
+                  <button type="submit">Parolni reset qilish</button>
+                </form>
+              </div>
+            </section>
+          </div>
 
-          <div class="meta" style="margin-top:16px;">Admin parolini reset qilish:</div>
-          <form method="post" action="/admin/admin-accounts/reset-password">
-            <div class="filters">
-              <label for="reset_admin_username"><strong>Login:</strong></label>
-              <input id="reset_admin_username" name="username" required />
+          <div class="card" style="margin-bottom:12px;">
+            <h3>Mavjud admin accountlar</h3>
+            <div class="body">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Login</th><th>Rol</th><th>Faol</th><th>Yaratgan</th><th>Yaratilgan</th><th>Yangilangan</th><th>Amal</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for a in admin_accounts %}
+                      <tr>
+                        <td>{{ a.username }}</td>
+                        <td>{{ admin_role_labels.get(a.role, a.role) }}</td>
+                        <td>{{ a.is_active }}</td>
+                        <td>{{ a.created_by or '-' }}</td>
+                        <td>{{ a.created_at }}</td>
+                        <td>{{ a.updated_at }}</td>
+                        <td>
+                          <form method="post" action="/admin/admin-accounts/toggle-active">
+                            <input type="hidden" name="username" value="{{ a.username }}" />
+                            {% if a.is_active %}
+                              <button class="btn-danger" type="submit">Deactivate</button>
+                            {% else %}
+                              <button type="submit">Activate</button>
+                            {% endif %}
+                          </form>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="filters">
-              <label for="reset_admin_password"><strong>Yangi parol:</strong></label>
-              <input id="reset_admin_password" name="new_password" type="password" minlength="8" required />
-            </div>
-            <div class="filters">
-              <label for="reset_admin_password_confirm"><strong>Yangi parol (qayta):</strong></label>
-              <input id="reset_admin_password_confirm" name="new_password_confirm" type="password" minlength="8" required />
-            </div>
-            <button type="submit">Parolni reset qilish</button>
-          </form>
+          </div>
 
-          <div class="meta" style="margin-top:16px;">Admin audit log (oxirgi 120):</div>
-          <table>
-            <thead>
-              <tr><th>Vaqt</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr>
-            </thead>
-            <tbody>
-              {% for row in admin_audit_logs %}
-                <tr>
-                  <td>{{ row.created_at }}</td>
-                  <td>{{ row.actor_username }}</td>
-                  <td>{{ row.action }}</td>
-                  <td>{{ row.target_username or '-' }}</td>
-                  <td>{{ row.details or '-' }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="card">
+            <h3>Admin audit log</h3>
+            <div class="body">
+              <form class="filters" method="get" action="/admin">
+                <input type="hidden" name="tab" value="admin_accounts" />
+                <label for="audit_actor">Actor:</label>
+                <input id="audit_actor" name="audit_actor" value="{{ audit_actor }}" placeholder="username" />
+                <label for="audit_action">Action:</label>
+                <input id="audit_action" name="audit_action" value="{{ audit_action }}" placeholder="support_ticket_reply" />
+                <label for="audit_target">Target:</label>
+                <input id="audit_target" name="audit_target" value="{{ audit_target }}" placeholder="target user/admin" />
+                <label for="audit_request_id">Request ID:</label>
+                <input id="audit_request_id" name="audit_request_id" value="{{ audit_request_id }}" placeholder="req-id" />
+                <label for="audit_limit">Limit:</label>
+                <input id="audit_limit" type="number" name="audit_limit" min="20" max="1000" value="{{ audit_limit }}" />
+                <button type="submit">Filtrlash</button>
+                <a class="btn-secondary" href="/admin?tab=admin_accounts">Tozalash</a>
+                <a class="btn-secondary" href="/admin?tab=admin_accounts&audit_actor={{ audit_actor }}&audit_action={{ audit_action }}&audit_target={{ audit_target }}&audit_request_id={{ audit_request_id }}&audit_limit={{ audit_limit }}&audit_export=csv">CSV export</a>
+              </form>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Vaqt</th>
+                      <th>Actor</th>
+                      <th>Action</th>
+                      <th>Target</th>
+                      <th>IP</th>
+                      <th>Request ID</th>
+                      <th>Details</th>
+                      <th>Diff</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in admin_audit_logs %}
+                      <tr>
+                        <td>{{ row.created_at }}</td>
+                        <td>{{ row.actor_username }}</td>
+                        <td>{{ row.action }}</td>
+                        <td>{{ row.target_username or '-' }}</td>
+                        <td>{{ row.actor_ip or '-' }}</td>
+                        <td>{{ row.request_id or '-' }}</td>
+                        <td>
+                          <div>{{ row.details or '-' }}</div>
+                          <div class="meta">UA: {{ row.actor_user_agent or '-' }}</div>
+                        </td>
+                        <td style="min-width:230px;">
+                          {% if row.before_state or row.after_state %}
+                            <details>
+                              <summary>Ko'rish</summary>
+                              <div class="meta"><strong>Before:</strong> {{ row.before_state or '-' }}</div>
+                              <div class="meta"><strong>After:</strong> {{ row.after_state or '-' }}</div>
+                            </details>
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     {% endif %}
@@ -728,14 +1230,17 @@
       const dlg = document.getElementById(`pax-${tripId}`);
       if (dlg) dlg.showModal();
     }
+
     function closePassengers(tripId) {
       const dlg = document.getElementById(`pax-${tripId}`);
       if (dlg) dlg.close();
     }
+
     function openSupportTicket(ticketId) {
       const dlg = document.getElementById(`ticket-${ticketId}`);
       if (dlg) dlg.showModal();
     }
+
     function closeSupportTicket(ticketId) {
       const dlg = document.getElementById(`ticket-${ticketId}`);
       if (dlg) dlg.close();

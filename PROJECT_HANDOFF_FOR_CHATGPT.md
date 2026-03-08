@@ -1,8 +1,34 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-07 (Asia/Tashkent, evening sync)
+Last updated: 2026-03-08 (Asia/Tashkent, admin panel audit+SLA sync)
 Repository: `Nurboev1/taxi_app`
 Main branch head (local before this handoff update): `20e3d7e`
+
+## 0) So'nggi yangilanish (2026-03-08)
+
+- Admin panel audit log tizimi kengaytirildi:
+  - `admin_audit_logs`ga `actor_ip`, `request_id`, `actor_user_agent`, `before_state`, `after_state` qo'shildi
+  - barcha muhim admin actionlarda old/new state diff auditga yoziladi
+  - audit log filterlari qo'shildi (`actor`, `action`, `target`, `request_id`, `limit`)
+  - audit log CSV export qo'shildi (`admin_accounts` tabdan)
+- Support ticketlar uchun SLA dashboard qo'shildi:
+  - summary kartalar: `open`, `waiting_support`, `waiting_user`, `escalated`, `breached`
+  - har ticketda `waiting_on`, `pending_minutes`, `auto_close_minutes_left` ko'rsatiladi
+  - eskalatsiya qoidası: support navbati 30+ daqiqa (`SUPPORT_TICKET_ESCALATE_MINUTES=30`)
+  - breach ko'rsatkichi: support javobidan keyin 24 soat oynasi (`SUPPORT_TICKET_AUTO_CLOSE_HOURS=24`)
+  - ticketlar SLA og'irligiga qarab sortlanadi (breached/escalated birinchi)
+- Support ticket status boshqaruvi kengaydi:
+  - `superadmin` endi ticket detail modal ichidan statusni `open/in_progress/closed`ga o'zgartira oladi
+- Admin panel UI to'liq qayta dizayn qilindi:
+  - yangi login sahifasi (`backend/app/templates/admin/login.html`)
+  - yangi dashboard vizual tizimi (`backend/app/templates/admin/dashboard.html`)
+  - responsive layout, zamonaviy card/hero/tab kompozitsiyasi
+- Yangi migration:
+  - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
+- Eslatma: productionda deploydan oldin:
+  - `cd /opt/safaruz/backend`
+  - `source .venv/bin/activate`
+  - `python -m alembic upgrade head`
 
 ## 0) So'nggi yangilanish (2026-03-07)
 
@@ -366,6 +392,8 @@ Qila oladi:
 - Support ticketlarni chat ko'rinishida ochib ko'rish (`support`/`superadmin`)
 - Support javob yuborish (`support`/`superadmin`)
 - Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
+- Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
+- Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
 
 ---
 
@@ -386,6 +414,8 @@ Migrations:
 - `0012_admin_audit_logs.py`
 - `0013_support_tickets_and_telegram_sessions.py` (revision id: `0013_support_tickets`)
 - `0014_ticket_messages.py`
+- `0015_request_seat_mix.py`
+- `0016_admin_audit_log_metadata.py`
 
 Asosiy jadvallar:
 - `users`
@@ -665,6 +695,10 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 - Eslatma:
   - `backend/.env.example` user tomonidan dirty; commitga qo'shmaslik kerak
   - agar keyingi redesign davom etsa, auth page'lar (`auth_page.dart`, `password_login_page.dart`, `otp_page.dart`, `set_password_page.dart`) ham shu neo vizual tizimga ko'chirilishi mumkin
+- 2026-03-08 admin panel wave:
+  - admin dashboard/login dizayni to'liq yangilandi
+  - audit log metadata + state diff qo'shildi
+  - support ticket SLA paneli qo'shildi
 
 - RU i18n matnlari encoding buzilgan.
 - UIda ba'zi joylarda eski/yarim tayyor auth flow textlari qolgan bo'lishi mumkin.
@@ -684,7 +718,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan oxirgi migrationlarni (`0014_ticket_messages`gacha) productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0016_admin_audit_log_metadata`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose

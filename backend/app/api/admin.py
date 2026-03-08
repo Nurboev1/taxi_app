@@ -1,12 +1,16 @@
+import csv
 from datetime import date, datetime, timedelta, timezone
+import io
+import json
 import os
 from pathlib import Path
 import subprocess
 import time
 from typing import Iterable
+from uuid import uuid4
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from sqlalchemy import func, select
@@ -32,6 +36,7 @@ from app.services.support_tickets import (
     SENDER_SUPPORT,
     TICKET_STATUS_CLOSED,
     TICKET_STATUS_IN_PROGRESS,
+    TICKET_STATUS_OPEN,
     append_ticket_message,
     auto_close_stale_tickets,
 )
@@ -65,6 +70,9 @@ ADMIN_TAB_ACCESS = {
     ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security", "support_tickets"},
     ADMIN_ROLE_OPS: {"overview", "resources", "errors", "security"},
 }
+
+SUPPORT_TICKET_ESCALATE_MINUTES = 30
+SUPPORT_TICKET_AUTO_CLOSE_HOURS = 24
 
 
 def _normalize_admin_role(role: str | None) -> str:
@@ -163,19 +171,58 @@ def _validate_admin_username(username: str) -> str:
     return value
 
 
+def _normalize_ip(raw: str | None) -> str | None:
+    value = (raw or "").strip()
+    if not value:
+        return None
+    return value[:128]
+
+
+def _extract_request_client_ip(request: Request) -> str | None:
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        first = x_forwarded_for.split(",", 1)[0].strip()
+        normalized = _normalize_ip(first)
+        if normalized:
+            return normalized
+    x_real_ip = _normalize_ip(request.headers.get("x-real-ip"))
+    if x_real_ip:
+        return x_real_ip
+    client_host = _normalize_ip(request.client.host if request.client else None)
+    if client_host:
+        return client_host
+    return None
+
+
+def _serialize_audit_state(value: dict[str, object] | None) -> str | None:
+    if not value:
+        return None
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 def _write_admin_audit_log(
+    request: Request,
     db: Session,
     actor_username: str,
     action: str,
     target_username: str | None = None,
     details: str | None = None,
+    before_state: dict[str, object] | None = None,
+    after_state: dict[str, object] | None = None,
 ) -> None:
+    request_id = (request.headers.get("x-request-id") or "").strip() or str(uuid4())
+    user_agent = (request.headers.get("user-agent") or "").strip() or None
     db.add(
         AdminAuditLog(
             actor_username=actor_username,
             action=action,
             target_username=target_username,
             details=details,
+            actor_ip=_extract_request_client_ip(request),
+            actor_user_agent=user_agent[:512] if user_agent else None,
+            request_id=request_id[:128],
+            before_state=_serialize_audit_state(before_state),
+            after_state=_serialize_audit_state(after_state),
             created_at=datetime.now(timezone.utc),
         )
     )
@@ -458,6 +505,17 @@ def admin_dashboard(request: Request):
         driver_access_status = request.query_params.get("driver_access_status")
         admin_password_status = request.query_params.get("admin_password_status")
         admin_accounts_status = request.query_params.get("admin_accounts_status")
+        audit_actor = (request.query_params.get("audit_actor") or "").strip()
+        audit_action = (request.query_params.get("audit_action") or "").strip()
+        audit_target = (request.query_params.get("audit_target") or "").strip()
+        audit_request_id = (request.query_params.get("audit_request_id") or "").strip()
+        audit_export = ((request.query_params.get("audit_export") or "").strip().lower() == "csv")
+        audit_limit_raw = (request.query_params.get("audit_limit") or "120").strip()
+        try:
+            audit_limit = int(audit_limit_raw)
+        except ValueError:
+            audit_limit = 120
+        audit_limit = max(20, min(audit_limit, 1000))
         support_tickets_status = request.query_params.get("support_tickets_status")
         support_ticket_open = request.query_params.get("support_ticket_open", "").strip()
         support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
@@ -475,6 +533,14 @@ def admin_dashboard(request: Request):
         admin_audit_logs: list[AdminAuditLog] = []
         support_tickets: list[SupportTicket] = []
         support_ticket_messages: dict[int, list[SupportTicketMessage]] = {}
+        support_ticket_sla: dict[int, dict[str, object]] = {}
+        support_sla_summary = {
+            "open_total": 0,
+            "waiting_support": 0,
+            "waiting_user": 0,
+            "escalated": 0,
+            "breached": 0,
+        }
         support_tickets_error: str | None = None
         resource_metrics = _collect_resource_metrics()
         try:
@@ -702,9 +768,16 @@ def admin_dashboard(request: Request):
                 admin_accounts = db.scalars(
                     select(AdminCredential).order_by(AdminCredential.created_at.desc())
                 ).all()
-                admin_audit_logs = db.scalars(
-                    select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(120)
-                ).all()
+                audit_stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+                if audit_actor:
+                    audit_stmt = audit_stmt.where(AdminAuditLog.actor_username.ilike(f"%{audit_actor}%"))
+                if audit_action:
+                    audit_stmt = audit_stmt.where(AdminAuditLog.action.ilike(f"%{audit_action}%"))
+                if audit_target:
+                    audit_stmt = audit_stmt.where(AdminAuditLog.target_username.ilike(f"%{audit_target}%"))
+                if audit_request_id:
+                    audit_stmt = audit_stmt.where(AdminAuditLog.request_id.ilike(f"%{audit_request_id}%"))
+                admin_audit_logs = db.scalars(audit_stmt.limit(audit_limit)).all()
             except SQLAlchemyError:
                 admin_accounts = []
                 admin_audit_logs = []
@@ -729,12 +802,102 @@ def admin_dashboard(request: Request):
                     ).all()
                     for row in message_rows:
                         support_ticket_messages.setdefault(row.ticket_id, []).append(row)
+
+                now_utc = datetime.now(timezone.utc)
+                for ticket in support_tickets:
+                    is_open = ticket.status in {TICKET_STATUS_OPEN, TICKET_STATUS_IN_PROGRESS}
+                    waiting_on = "none"
+                    if is_open:
+                        if ticket.last_actor == SENDER_SUPPORT:
+                            waiting_on = "user"
+                        else:
+                            waiting_on = "support"
+                    pending_minutes = max(0, int((now_utc - ticket.last_activity_at).total_seconds() // 60))
+                    age_minutes = max(0, int((now_utc - ticket.created_at).total_seconds() // 60))
+                    auto_close_deadline = None
+                    auto_close_minutes_left = None
+                    breached = False
+                    if is_open and ticket.last_actor == SENDER_SUPPORT:
+                        auto_close_deadline = ticket.last_activity_at + timedelta(hours=SUPPORT_TICKET_AUTO_CLOSE_HOURS)
+                        auto_close_minutes_left = int((auto_close_deadline - now_utc).total_seconds() // 60)
+                        breached = auto_close_minutes_left <= 0
+
+                    escalated = waiting_on == "support" and pending_minutes >= SUPPORT_TICKET_ESCALATE_MINUTES
+                    support_ticket_sla[ticket.id] = {
+                        "waiting_on": waiting_on,
+                        "pending_minutes": pending_minutes,
+                        "age_minutes": age_minutes,
+                        "auto_close_deadline": auto_close_deadline,
+                        "auto_close_minutes_left": auto_close_minutes_left,
+                        "breached": breached,
+                        "escalated": escalated,
+                    }
+                    if is_open:
+                        support_sla_summary["open_total"] += 1
+                    if waiting_on == "support":
+                        support_sla_summary["waiting_support"] += 1
+                    if waiting_on == "user":
+                        support_sla_summary["waiting_user"] += 1
+                    if escalated:
+                        support_sla_summary["escalated"] += 1
+                    if breached:
+                        support_sla_summary["breached"] += 1
+
+                support_tickets.sort(
+                    key=lambda ticket: (
+                        0 if support_ticket_sla.get(ticket.id, {}).get("breached") else 1,
+                        0 if support_ticket_sla.get(ticket.id, {}).get("escalated") else 1,
+                        0 if support_ticket_sla.get(ticket.id, {}).get("waiting_on") == "support" else 1,
+                        support_ticket_sla.get(ticket.id, {}).get("pending_minutes", 0) * -1,
+                        ticket.id * -1,
+                    )
+                )
             except SQLAlchemyError:
                 support_tickets = []
                 support_ticket_messages = {}
+                support_ticket_sla = {}
                 support_tickets_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
     finally:
         db.close()
+
+    if tab == "admin_accounts" and audit_export and _can_access_tab(admin_role, "admin_accounts"):
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "created_at",
+                "actor_username",
+                "action",
+                "target_username",
+                "details",
+                "actor_ip",
+                "request_id",
+                "actor_user_agent",
+                "before_state",
+                "after_state",
+            ]
+        )
+        for row in admin_audit_logs:
+            writer.writerow(
+                [
+                    row.created_at.isoformat() if row.created_at else "",
+                    row.actor_username or "",
+                    row.action or "",
+                    row.target_username or "",
+                    row.details or "",
+                    row.actor_ip or "",
+                    row.request_id or "",
+                    row.actor_user_agent or "",
+                    row.before_state or "",
+                    row.after_state or "",
+                ]
+            )
+        filename = f"admin_audit_logs_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+        return Response(
+            content=buffer.getvalue(),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     return templates.TemplateResponse(
         request=request,
@@ -769,11 +932,18 @@ def admin_dashboard(request: Request):
             "admin_accounts": admin_accounts,
             "admin_accounts_error": admin_accounts_error,
             "admin_audit_logs": admin_audit_logs,
+            "audit_actor": audit_actor,
+            "audit_action": audit_action,
+            "audit_target": audit_target,
+            "audit_request_id": audit_request_id,
+            "audit_limit": audit_limit,
             "support_tickets_status": support_tickets_status or "",
             "support_ticket_filter": support_ticket_filter,
             "support_ticket_open": support_ticket_open,
             "support_tickets": support_tickets,
             "support_ticket_messages": support_ticket_messages,
+            "support_ticket_sla": support_ticket_sla,
+            "support_sla_summary": support_sla_summary,
             "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
@@ -811,6 +981,13 @@ def admin_driver_access(
                 url=f"/admin?tab=driver_access&driver_access_user_id={user_id}&driver_access_status=not_found",
                 status_code=302,
             )
+        before_state = {
+            "role": user.role.value if user.role else None,
+            "driver_blocked": user.driver_blocked,
+            "driver_access_override": user.driver_access_override,
+            "driver_block_reason": user.driver_block_reason,
+            "driver_unblocked_at": user.driver_unblocked_at.isoformat() if user.driver_unblocked_at else None,
+        }
 
         if action == "block":
             user.driver_blocked = True
@@ -830,11 +1007,20 @@ def admin_driver_access(
             status = "bad_action"
         db.add(user)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action=f"driver_access_{status}",
             target_username=str(user.id),
             details=f"user_id={user.id}",
+            before_state=before_state,
+            after_state={
+                "role": user.role.value if user.role else None,
+                "driver_blocked": user.driver_blocked,
+                "driver_access_override": user.driver_access_override,
+                "driver_block_reason": user.driver_block_reason,
+                "driver_unblocked_at": user.driver_unblocked_at.isoformat() if user.driver_unblocked_at else None,
+            },
         )
         db.commit()
     finally:
@@ -881,15 +1067,27 @@ def admin_support_ticket_status(
                 url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=not_found",
                 status_code=302,
             )
+        before_state = {
+            "status": ticket.status,
+            "last_actor": ticket.last_actor,
+            "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
+        }
         ticket.status = normalized_status
         ticket.updated_at = datetime.now(timezone.utc)
         db.add(ticket)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action="support_ticket_status_updated",
             target_username=str(ticket.user_id) if ticket.user_id is not None else None,
             details=f"ticket_id={ticket.id},status={normalized_status}",
+            before_state=before_state,
+            after_state={
+                "status": ticket.status,
+                "last_actor": ticket.last_actor,
+                "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
+            },
         )
         db.commit()
     except SQLAlchemyError:
@@ -970,14 +1168,26 @@ def admin_support_ticket_reply(
         )
         send_bot_reply(chat_id=ticket.telegram_chat_id, text=outbound)
 
+        before_state = {
+            "status": ticket.status,
+            "last_actor": ticket.last_actor,
+            "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
+        }
         ticket.status = TICKET_STATUS_IN_PROGRESS
         append_ticket_message(db=db, ticket=ticket, sender_role=SENDER_SUPPORT, message=text)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action="support_ticket_reply",
             target_username=str(ticket.user_id) if ticket.user_id is not None else None,
             details=f"ticket_id={ticket.id}",
+            before_state=before_state,
+            after_state={
+                "status": ticket.status,
+                "last_actor": ticket.last_actor,
+                "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
+            },
         )
         db.commit()
     except TelegramSupportError:
@@ -1046,6 +1256,7 @@ def admin_change_password(
             )
 
         credential = _load_admin_credential(db, admin_username)
+        had_credential = credential is not None
         now = datetime.now(timezone.utc)
         hashed = hash_password(normalized_new_password)
         if credential is None:
@@ -1063,10 +1274,13 @@ def admin_change_password(
             credential.updated_at = now
         db.add(credential)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_username,
             action="admin_password_changed",
             target_username=admin_username,
+            before_state={"credential_exists": had_credential},
+            after_state={"credential_exists": True},
         )
         db.commit()
     except SQLAlchemyError:
@@ -1151,11 +1365,13 @@ def admin_create_account(
         )
         db.add(account)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action="admin_account_created",
             target_username=normalized_username,
             details=f"role={normalized_role}",
+            after_state={"role": normalized_role, "is_active": True},
         )
         db.commit()
     except SQLAlchemyError:
@@ -1207,11 +1423,14 @@ def admin_toggle_account_active(
         account.updated_at = datetime.now(timezone.utc)
         db.add(account)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action="admin_account_toggled",
             target_username=normalized_username,
             details=f"is_active={account.is_active}",
+            before_state={"is_active": not account.is_active},
+            after_state={"is_active": account.is_active},
         )
         db.commit()
         status = "toggle_active" if account.is_active else "toggle_inactive"
@@ -1273,10 +1492,13 @@ def admin_reset_account_password(
         account.updated_at = datetime.now(timezone.utc)
         db.add(account)
         _write_admin_audit_log(
+            request=request,
             db=db,
             actor_username=admin_session["username"],
             action="admin_account_password_reset",
             target_username=normalized_username,
+            before_state={"password_changed": False},
+            after_state={"password_changed": True},
         )
         db.commit()
     except SQLAlchemyError:
