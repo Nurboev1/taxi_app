@@ -32,6 +32,7 @@ from app.models.support_ticket_message import SupportTicketMessage
 from app.models.trip import DriverTrip
 from app.models.user import User
 from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
+from app.services.notifications import create_notification
 from app.services.support_tickets import (
     SENDER_SUPPORT,
     TICKET_STATUS_CLOSED,
@@ -65,6 +66,7 @@ ADMIN_TAB_ACCESS = {
         "errors",
         "security",
         "admin_accounts",
+        "broadcasts",
         "support_tickets",
         "search360",
     },
@@ -74,6 +76,14 @@ ADMIN_TAB_ACCESS = {
 
 SUPPORT_TICKET_ESCALATE_MINUTES = 30
 SUPPORT_TICKET_AUTO_CLOSE_HOURS = 24
+BROADCAST_AUDIENCE_ALL = "all"
+BROADCAST_AUDIENCE_DRIVERS = "drivers"
+BROADCAST_AUDIENCE_PASSENGERS = "passengers"
+BROADCAST_AUDIENCES = {
+    BROADCAST_AUDIENCE_ALL: "Barcha foydalanuvchilar",
+    BROADCAST_AUDIENCE_DRIVERS: "Faqat haydovchilar",
+    BROADCAST_AUDIENCE_PASSENGERS: "Faqat yo'lovchilar",
+}
 OVERVIEW_WINDOWS_HOURS = {
     "24h": 24,
     "7d": 24 * 7,
@@ -209,6 +219,14 @@ def _admin_required(request: Request, allowed_roles: Iterable[str] | None = None
 
 def _can_access_tab(role: str, tab: str) -> bool:
     return tab in ADMIN_TAB_ACCESS.get(_normalize_admin_role(role), set())
+
+
+def _broadcast_user_filters(audience: str):
+    if audience == BROADCAST_AUDIENCE_DRIVERS:
+        return [User.role == UserRole.driver]
+    if audience == BROADCAST_AUDIENCE_PASSENGERS:
+        return [User.role == UserRole.passenger]
+    return []
 
 
 def _load_admin_credential(db: Session, username: str) -> AdminCredential | None:
@@ -602,6 +620,7 @@ def admin_dashboard(request: Request):
         driver_access_status = request.query_params.get("driver_access_status")
         admin_password_status = request.query_params.get("admin_password_status")
         admin_accounts_status = request.query_params.get("admin_accounts_status")
+        broadcast_status = request.query_params.get("broadcast_status")
         audit_actor = (request.query_params.get("audit_actor") or "").strip()
         audit_action = (request.query_params.get("audit_action") or "").strip()
         audit_target = (request.query_params.get("audit_target") or "").strip()
@@ -637,6 +656,7 @@ def admin_dashboard(request: Request):
         admin_accounts: list[AdminCredential] = []
         admin_accounts_error: str | None = None
         admin_audit_logs: list[AdminAuditLog] = []
+        broadcast_recent_logs: list[AdminAuditLog] = []
         support_tickets: list[SupportTicket] = []
         support_recent_for_overview: list[SupportTicket] = []
         support_ticket_messages: dict[int, list[SupportTicketMessage]] = {}
@@ -987,6 +1007,18 @@ def admin_dashboard(request: Request):
                 admin_accounts = []
                 admin_audit_logs = []
                 admin_accounts_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
+
+        if _can_access_tab(admin_role, "broadcasts"):
+            try:
+                broadcast_recent_logs = db.scalars(
+                    select(AdminAuditLog)
+                    .where(AdminAuditLog.action == "broadcast_notifications_sent")
+                    .order_by(AdminAuditLog.created_at.desc())
+                    .limit(20)
+                ).all()
+            except SQLAlchemyError:
+                db.rollback()
+                broadcast_recent_logs = []
 
         if _can_access_tab(admin_role, "support_tickets"):
             try:
@@ -1653,6 +1685,9 @@ def admin_dashboard(request: Request):
             "admin_accounts": admin_accounts,
             "admin_accounts_error": admin_accounts_error,
             "admin_audit_logs": admin_audit_logs,
+            "broadcast_status": broadcast_status or "",
+            "broadcast_recent_logs": broadcast_recent_logs,
+            "broadcast_audiences": BROADCAST_AUDIENCES,
             "audit_actor": audit_actor,
             "audit_action": audit_action,
             "audit_target": audit_target,
@@ -1880,6 +1915,109 @@ def admin_support_ticket_reply(
             f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
             f"&support_tickets_status=replied&support_ticket_open={ticket_id}"
         ),
+        status_code=302,
+    )
+
+
+@router.post("/broadcasts/send")
+def admin_send_broadcast(
+    request: Request,
+    audience: str = Form(...),
+    title: str = Form(...),
+    body: str = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(
+            url="/admin?tab=overview",
+            status_code=302,
+        )
+
+    normalized_audience = (audience or "").strip().lower()
+    if normalized_audience not in BROADCAST_AUDIENCES:
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=invalid_audience",
+            status_code=302,
+        )
+
+    normalized_title = (title or "").strip()
+    normalized_body = (body or "").strip()
+    if not normalized_title:
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=empty_title",
+            status_code=302,
+        )
+    if not normalized_body:
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=empty_body",
+            status_code=302,
+        )
+    if len(normalized_title) > 200:
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=title_too_long",
+            status_code=302,
+        )
+    if len(normalized_body) > 500:
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=body_too_long",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        users_stmt = select(User).order_by(User.id.asc())
+        user_filters = _broadcast_user_filters(normalized_audience)
+        if user_filters:
+            users_stmt = users_stmt.where(*user_filters)
+        recipients = db.scalars(users_stmt).all()
+        push_ready = sum(1 for user in recipients if user.fcm_token)
+
+        for user in recipients:
+            create_notification(
+                db=db,
+                user=user,
+                kind="admin_broadcast",
+                uz_title=normalized_title,
+                ru_title=normalized_title,
+                en_title=normalized_title,
+                uz_body=normalized_body,
+                ru_body=normalized_body,
+                en_body=normalized_body,
+            )
+
+        _write_admin_audit_log(
+            request=request,
+            db=db,
+            actor_username=admin_session["username"],
+            action="broadcast_notifications_sent",
+            details=(
+                f"audience={normalized_audience},"
+                f"recipients={len(recipients)},"
+                f"push_ready={push_ready},"
+                f"title={normalized_title[:120]}"
+            ),
+            after_state={
+                "audience": normalized_audience,
+                "recipients": len(recipients),
+                "push_ready": push_ready,
+                "title": normalized_title,
+                "body": normalized_body,
+            },
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=broadcasts&broadcast_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=broadcasts&broadcast_status=sent",
         status_code=302,
     )
 

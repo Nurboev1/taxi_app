@@ -661,6 +661,7 @@
       {% if 'resources' in tab_access %}<a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>{% endif %}
       {% if 'errors' in tab_access %}<a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>{% endif %}
       {% if 'support_tickets' in tab_access %}<a class="tab {% if tab == 'support_tickets' %}active{% endif %}" href="/admin?tab=support_tickets">Support ticketlar</a>{% endif %}
+      {% if 'broadcasts' in tab_access %}<a class="tab {% if tab == 'broadcasts' %}active{% endif %}" href="/admin?tab=broadcasts">Broadcast</a>{% endif %}
       {% if 'security' in tab_access %}<a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>{% endif %}
       {% if 'admin_accounts' in tab_access %}<a class="tab {% if tab == 'admin_accounts' %}active{% endif %}" href="/admin?tab=admin_accounts">Admin accountlar</a>{% endif %}
     </nav>
@@ -1398,6 +1399,83 @@
           {% if not support_tickets %}
             <div class="notice">Hozircha support ticket yo'q.</div>
           {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'broadcasts' %}
+      <section class="card">
+        <h3>Broadcast notifications</h3>
+        <div class="body">
+          {% if broadcast_status == 'sent' %}
+            <div class="ok">Broadcast yuborildi.</div>
+          {% elif broadcast_status == 'invalid_audience' %}
+            <div class="error">Audience noto'g'ri tanlangan.</div>
+          {% elif broadcast_status == 'empty_title' %}
+            <div class="error">Sarlavha bo'sh bo'lmasin.</div>
+          {% elif broadcast_status == 'empty_body' %}
+            <div class="error">Xabar matni bo'sh bo'lmasin.</div>
+          {% elif broadcast_status == 'title_too_long' %}
+            <div class="error">Sarlavha 200 belgidan oshmasin.</div>
+          {% elif broadcast_status == 'body_too_long' %}
+            <div class="error">Xabar matni 500 belgidan oshmasin.</div>
+          {% elif broadcast_status == 'db_error' %}
+            <div class="error">Broadcast yuborishda DB xatoligi yuz berdi.</div>
+          {% endif %}
+
+          <div class="meta">Bu bo'lim faqat superadmin uchun. Bildirishnoma app ichidagi notification listga yoziladi va FCM tokeni bor userlarga push yuboriladi.</div>
+
+          <div class="grid" style="margin-top:12px;">
+            <section class="card">
+              <h3>Yangi broadcast</h3>
+              <div class="body">
+                <form method="post" action="/admin/broadcasts/send">
+                  <div class="filters">
+                    <label for="broadcast_audience">Audience:</label>
+                    <select id="broadcast_audience" name="audience">
+                      {% for key, label in broadcast_audiences.items() %}
+                        <option value="{{ key }}">{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="filters">
+                    <label for="broadcast_title">Sarlavha:</label>
+                    <input id="broadcast_title" name="title" maxlength="200" required />
+                  </div>
+                  <div class="filters" style="align-items:flex-start;">
+                    <label for="broadcast_body">Xabar:</label>
+                    <textarea id="broadcast_body" name="body" maxlength="500" rows="6" style="min-width:320px; width:100%; border-radius:14px; border:1px solid rgba(28,57,51,.14); background:#fbfbf8; padding:12px 14px; color:#16332c;" required></textarea>
+                  </div>
+                  <button type="submit">Broadcast yuborish</button>
+                </form>
+              </div>
+            </section>
+
+            <section class="card">
+              <h3>Oxirgi yuborilganlar</h3>
+              <div class="body">
+                {% if broadcast_recent_logs %}
+                  <div class="table-wrap">
+                    <table>
+                      <thead><tr><th>Vaqt</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead>
+                      <tbody>
+                        {% for row in broadcast_recent_logs %}
+                          <tr>
+                            <td>{{ row.created_at }}</td>
+                            <td>{{ row.actor_username }}</td>
+                            <td>{{ row.action }}</td>
+                            <td style="white-space:pre-wrap; max-width:380px;">{{ row.details or '-' }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <div class="notice">Hali broadcast yuborilmagan.</div>
+                {% endif %}
+              </div>
+            </section>
+          </div>
         </div>
       </section>
     {% endif %}

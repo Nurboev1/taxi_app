@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, removed 0017 dependency)
+Last updated: 2026-03-08 (Asia/Tashkent, superadmin broadcast notifications added)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `a64b314`
+Main branch head (local before this handoff update): `fb7f9dc`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -36,6 +36,11 @@ Main branch head (local before this handoff update): `a64b314`
   - prefix query qo'llab-quvvatlanadi (`user:`, `ticket:`, `trip:`, `request:`, `claim:`, `audit:`)
   - topilgan user uchun 360 summary (support, notif, trips, requests, claims)
   - unified timeline (user/support/trip/request/claim/audit eventlar)
+- Superadmin uchun `Broadcast` tabi qo'shildi:
+  - audience: `all`, `drivers`, `passengers`
+  - xabar app ichidagi `user_notifications`ga yoziladi
+  - `fcm_token` mavjud userlarga push yuboriladi
+  - har yuborish `admin_audit_logs`ga `broadcast_notifications_sent` action bilan yoziladi
 - Telegram support oqimi kengaytirildi:
   - Media evidence: bot `photo/video/voice/audio/document`ni qabul qiladi
   - Support chat media forward: user yuborgan media support kanaliga forward qilinadi
@@ -405,6 +410,7 @@ Endpointlar:
 - `/admin/driver-access` (block/unblock)
 - `/admin/change-password` (POST)
 - `/admin/support-tickets/reply` (POST)
+- `/admin/broadcasts/send` (POST, superadmin only)
 
 Qila oladi:
 - Statistika ko'rish
@@ -429,6 +435,10 @@ Qila oladi:
   - cross-entity qidiruv (`user/ticket/trip/request/claim/audit`)
   - prefix qidiruv (`user:`, `ticket:`, `trip:`, `request:`, `claim:`, `audit:`)
   - topilgan user uchun 360 summary + unified timeline
+- Broadcast notifications panel (`superadmin` only):
+  - audience bo'yicha bulk notification yuborish (`all`, `drivers`, `passengers`)
+  - app notification + FCM push birga ishlaydi
+  - oxirgi broadcastlar audit history ko'rinishida chiqadi
 
 ---
 
