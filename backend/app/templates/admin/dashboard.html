@@ -656,6 +656,7 @@
       {% if 'overview' in tab_access %}<a class="tab {% if tab == 'overview' %}active{% endif %}" href="/admin?tab=overview">Dashboard</a>{% endif %}
       {% if 'trips' in tab_access %}<a class="tab {% if tab == 'trips' %}active{% endif %}" href="/admin?tab=trips">Oxirgi safarlar</a>{% endif %}
       {% if 'users' in tab_access %}<a class="tab {% if tab == 'users' %}active{% endif %}" href="/admin?tab=users">Foydalanuvchi qidirish</a>{% endif %}
+      {% if 'search360' in tab_access %}<a class="tab {% if tab == 'search360' %}active{% endif %}" href="/admin?tab=search360">Global Search 360</a>{% endif %}
       {% if 'driver_access' in tab_access %}<a class="tab {% if tab == 'driver_access' %}active{% endif %}" href="/admin?tab=driver_access">Haydovchi blok</a>{% endif %}
       {% if 'resources' in tab_access %}<a class="tab {% if tab == 'resources' %}active{% endif %}" href="/admin?tab=resources">Server resurslari</a>{% endif %}
       {% if 'errors' in tab_access %}<a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>{% endif %}
@@ -829,6 +830,155 @@
           </div>
         </section>
       </div>
+    {% endif %}
+
+    {% if tab == 'search360' %}
+      <section class="card">
+        <h3>Global Search + User 360</h3>
+        <div class="body">
+          <form class="filters" method="get" action="/admin">
+            <input type="hidden" name="tab" value="search360" />
+            <label for="search_query">Qidiruv:</label>
+            <input id="search_query" name="search_query" value="{{ search_query }}" placeholder="phone, id, user:123, ticket:55" style="min-width:300px;" />
+            <label for="search_kind">Tur:</label>
+            <select id="search_kind" name="search_kind">
+              <option value="all" {% if search_kind == 'all' %}selected{% endif %}>all</option>
+              <option value="user" {% if search_kind == 'user' %}selected{% endif %}>user</option>
+              <option value="ticket" {% if search_kind == 'ticket' %}selected{% endif %}>ticket</option>
+              <option value="trip" {% if search_kind == 'trip' %}selected{% endif %}>trip</option>
+              <option value="request" {% if search_kind == 'request' %}selected{% endif %}>request</option>
+              <option value="claim" {% if search_kind == 'claim' %}selected{% endif %}>claim</option>
+              <option value="audit" {% if search_kind == 'audit' %}selected{% endif %}>audit</option>
+            </select>
+            <button type="submit">Qidirish</button>
+            <a class="btn-secondary" href="/admin?tab=search360">Tozalash</a>
+          </form>
+
+          <div class="meta">
+            Prefixlar: <code>user:</code>, <code>ticket:</code>, <code>trip:</code>, <code>request:</code>, <code>claim:</code>, <code>audit:</code>.
+          </div>
+
+          {% if search_error %}
+            <div class="error" style="margin-top:10px;">{{ search_error }}</div>
+          {% endif %}
+
+          {% if search_query %}
+            <div class="kpi-grid" style="margin-top:12px;">
+              <div class="kpi-card"><div class="k">Users</div><div class="v">{{ search_summary.users }}</div></div>
+              <div class="kpi-card"><div class="k">Tickets</div><div class="v">{{ search_summary.tickets }}</div></div>
+              <div class="kpi-card"><div class="k">Trips</div><div class="v">{{ search_summary.trips }}</div></div>
+              <div class="kpi-card"><div class="k">Requests</div><div class="v">{{ search_summary.requests }}</div></div>
+              <div class="kpi-card"><div class="k">Claims</div><div class="v">{{ search_summary.claims }}</div></div>
+              <div class="kpi-card"><div class="k">Audit logs</div><div class="v">{{ search_summary.audit_logs }}</div></div>
+              <div class="kpi-card"><div class="k">Timeline events</div><div class="v">{{ search_summary.timeline }}</div></div>
+            </div>
+
+            {% if search_focus_user and search_focus_stats %}
+              <section class="card" style="margin-bottom:12px;">
+                <h3>User 360: #{{ search_focus_user.id }} ({{ search_focus_user.phone }})</h3>
+                <div class="body">
+                  <div class="filters">
+                    <a class="btn-secondary" href="/admin?tab=users&user_id={{ search_focus_user.id }}">User detail</a>
+                    <a class="btn-secondary" href="/admin?tab=driver_access&driver_access_user_id={{ search_focus_user.id }}">Driver access</a>
+                    <a class="btn-secondary" href="/admin?tab=support_tickets&support_ticket_filter=all">Support tickets</a>
+                  </div>
+                  <div class="table-wrap">
+                    <table>
+                      <tbody>
+                        <tr><th>Ism</th><td>{{ search_focus_user.name }}</td><th>Rol</th><td>{{ search_focus_stats.role }}</td></tr>
+                        <tr><th>Parol</th><td>{{ 'Bor' if search_focus_stats.password_set else "Yo'q" }}</td><th>Driver blocked</th><td>{{ search_focus_stats.driver_blocked }}</td></tr>
+                        <tr><th>Support (open)</th><td>{{ search_focus_stats.support_open }}</td><th>Support (jami)</th><td>{{ search_focus_stats.support_total }}</td></tr>
+                        <tr><th>Notifications unread</th><td>{{ search_focus_stats.notifications_unread }}</td><th>Trips (driver)</th><td>{{ search_focus_stats.driver_trips }}</td></tr>
+                        <tr><th>Requests (passenger)</th><td>{{ search_focus_stats.passenger_requests }}</td><th>Claims (driver)</th><td>{{ search_focus_stats.claims_as_driver }}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            {% endif %}
+
+            <div class="grid">
+              <section class="card">
+                <h3>Timeline (most recent)</h3>
+                <div class="body">
+                  <div class="table-wrap">
+                    <table>
+                      <thead><tr><th>Vaqt</th><th>Tur</th><th>Sarlavha</th><th>Meta</th></tr></thead>
+                      <tbody>
+                        {% for row in search_timeline %}
+                          <tr>
+                            <td>{{ row.at }}</td>
+                            <td>{{ row.kind }}</td>
+                            <td>{{ row.title }}</td>
+                            <td>{{ row.meta }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card">
+                <h3>Top matches</h3>
+                <div class="body">
+                  <div class="meta">Users</div>
+                  <div class="table-wrap" style="max-height: 180px;">
+                    <table>
+                      <thead><tr><th>ID</th><th>Phone</th><th>Role</th><th>Action</th></tr></thead>
+                      <tbody>
+                        {% for row in search_users[:8] %}
+                          <tr>
+                            <td>{{ row.id }}</td>
+                            <td>{{ row.phone }}</td>
+                            <td>{{ row.role.value }}</td>
+                            <td><a class="btn-secondary" href="/admin?tab=users&user_id={{ row.id }}">Ochish</a></td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="meta" style="margin-top:8px;">Support tickets</div>
+                  <div class="table-wrap" style="max-height: 180px;">
+                    <table>
+                      <thead><tr><th>ID</th><th>User</th><th>Status</th><th>Action</th></tr></thead>
+                      <tbody>
+                        {% for row in search_tickets[:8] %}
+                          <tr>
+                            <td>{{ row.id }}</td>
+                            <td>{{ row.user_id or '-' }}</td>
+                            <td>{{ row.status }}</td>
+                            <td><a class="btn-secondary" href="/admin?tab=support_tickets&support_ticket_filter=all&support_ticket_open={{ row.id }}">Ochish</a></td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="meta" style="margin-top:8px;">Trips / Requests / Claims</div>
+                  <div class="table-wrap" style="max-height: 200px;">
+                    <table>
+                      <thead><tr><th>Type</th><th>ID</th><th>Status</th><th>Owner</th></tr></thead>
+                      <tbody>
+                        {% for row in search_trips[:5] %}
+                          <tr><td>trip</td><td>{{ row.id }}</td><td>{{ row.status.value }}</td><td>driver={{ row.driver_id }}</td></tr>
+                        {% endfor %}
+                        {% for row in search_requests[:5] %}
+                          <tr><td>request</td><td>{{ row.id }}</td><td>{{ row.status.value }}</td><td>passenger={{ row.passenger_id }}</td></tr>
+                        {% endfor %}
+                        {% for row in search_claims[:5] %}
+                          <tr><td>claim</td><td>{{ row.id }}</td><td>{{ row.status.value }}</td><td>driver={{ row.driver_id }}</td></tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+          {% endif %}
+        </div>
+      </section>
     {% endif %}
 
     {% if tab == 'trips' %}

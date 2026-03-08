@@ -13,7 +13,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -66,9 +66,10 @@ ADMIN_TAB_ACCESS = {
         "security",
         "admin_accounts",
         "support_tickets",
+        "search360",
     },
-    ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security", "support_tickets"},
-    ADMIN_ROLE_OPS: {"overview", "resources", "errors", "security"},
+    ADMIN_ROLE_SUPPORT: {"overview", "trips", "users", "errors", "security", "support_tickets", "search360"},
+    ADMIN_ROLE_OPS: {"overview", "resources", "errors", "security", "search360"},
 }
 
 SUPPORT_TICKET_ESCALATE_MINUTES = 30
@@ -84,6 +85,29 @@ OVERVIEW_WINDOW_LABELS = {
     "7d": "So'nggi 7 kun",
     "30d": "So'nggi 30 kun",
     "90d": "So'nggi 90 kun",
+}
+SEARCH_KIND_VALUES = {"all", "user", "ticket", "trip", "request", "claim", "audit"}
+SEARCH_KIND_ALIASES = {
+    "u": "user",
+    "user": "user",
+    "users": "user",
+    "t": "trip",
+    "trip": "trip",
+    "trips": "trip",
+    "r": "request",
+    "req": "request",
+    "request": "request",
+    "requests": "request",
+    "c": "claim",
+    "claim": "claim",
+    "claims": "claim",
+    "ticket": "ticket",
+    "tickets": "ticket",
+    "s": "ticket",
+    "audit": "audit",
+    "log": "audit",
+    "logs": "audit",
+    "all": "all",
 }
 
 
@@ -210,6 +234,24 @@ def _serialize_audit_state(value: dict[str, object] | None) -> str | None:
     if not value:
         return None
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _normalize_search_kind(value: str | None) -> str:
+    normalized = (value or "").strip().lower()
+    return normalized if normalized in SEARCH_KIND_VALUES else "all"
+
+
+def _parse_search_query(raw_query: str | None, fallback_kind: str) -> tuple[str, str]:
+    query = (raw_query or "").strip()
+    if not query:
+        return "", fallback_kind
+    if ":" not in query:
+        return query, fallback_kind
+    prefix, suffix = query.split(":", 1)
+    mapped_kind = SEARCH_KIND_ALIASES.get(prefix.strip().lower())
+    if mapped_kind and suffix.strip():
+        return suffix.strip(), mapped_kind
+    return query, fallback_kind
 
 
 def _write_admin_audit_log(
@@ -537,6 +579,11 @@ def admin_dashboard(request: Request):
         if overview_window not in OVERVIEW_WINDOWS_HOURS:
             overview_window = "7d"
         overview_since = datetime.now(timezone.utc) - timedelta(hours=OVERVIEW_WINDOWS_HOURS[overview_window])
+        search_query_raw = (request.query_params.get("search_query") or "").strip()
+        search_kind = _normalize_search_kind(request.query_params.get("search_kind"))
+        search_query, search_kind = _parse_search_query(search_query_raw, search_kind)
+        search_query_id = int(search_query) if search_query.isdigit() else None
+        search_query_input = search_query_raw
         error_service_raw = request.query_params.get("error_service", "safaruz-backend")
         error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
@@ -563,6 +610,25 @@ def admin_dashboard(request: Request):
         overview_activity: list[dict[str, object]] = []
         overview_action_breakdown: list[dict[str, object]] = []
         overview_action_max = 1
+        search_users: list[User] = []
+        search_tickets: list[SupportTicket] = []
+        search_trips: list[DriverTrip] = []
+        search_requests: list[PassengerRequest] = []
+        search_claims: list[RequestClaim] = []
+        search_audit_logs: list[AdminAuditLog] = []
+        search_timeline: list[dict[str, object]] = []
+        search_focus_user: User | None = None
+        search_focus_stats: dict[str, object] | None = None
+        search_summary = {
+            "users": 0,
+            "tickets": 0,
+            "trips": 0,
+            "requests": 0,
+            "claims": 0,
+            "audit_logs": 0,
+            "timeline": 0,
+        }
+        search_error: str | None = None
         support_open_now = 0
         support_new_period = 0
         support_waiting_support = 0
@@ -1017,6 +1083,293 @@ def admin_dashboard(request: Request):
                 support_ticket_sla = {}
                 support_tickets_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
 
+        if _can_access_tab(admin_role, "search360"):
+            try:
+                if search_query:
+                    q_like = f"%{search_query}%"
+
+                    if search_kind in {"all", "user"}:
+                        user_filters = [
+                            User.phone.ilike(q_like),
+                            User.name.ilike(q_like),
+                            User.first_name.ilike(q_like),
+                            User.last_name.ilike(q_like),
+                        ]
+                        if search_query_id is not None:
+                            user_filters.insert(0, User.id == search_query_id)
+                        search_users = db.scalars(
+                            select(User)
+                            .where(or_(*user_filters))
+                            .order_by(User.created_at.desc())
+                            .limit(20)
+                        ).all()
+
+                    if search_kind in {"all", "ticket"}:
+                        ticket_filters = [
+                            SupportTicket.phone.ilike(q_like),
+                            SupportTicket.telegram_chat_id.ilike(q_like),
+                            SupportTicket.telegram_username.ilike(q_like),
+                            SupportTicket.subject.ilike(q_like),
+                            SupportTicket.message.ilike(q_like),
+                        ]
+                        if search_query_id is not None:
+                            ticket_filters.extend(
+                                [
+                                    SupportTicket.id == search_query_id,
+                                    SupportTicket.user_id == search_query_id,
+                                ]
+                            )
+                        search_tickets = db.scalars(
+                            select(SupportTicket)
+                            .where(or_(*ticket_filters))
+                            .order_by(SupportTicket.created_at.desc())
+                            .limit(30)
+                        ).all()
+
+                    if search_kind in {"all", "trip"}:
+                        trip_filters = [
+                            DriverTrip.from_location.ilike(q_like),
+                            DriverTrip.to_location.ilike(q_like),
+                        ]
+                        if search_query_id is not None:
+                            trip_filters.extend(
+                                [
+                                    DriverTrip.id == search_query_id,
+                                    DriverTrip.driver_id == search_query_id,
+                                ]
+                            )
+                        search_trips = db.scalars(
+                            select(DriverTrip)
+                            .where(or_(*trip_filters))
+                            .order_by(DriverTrip.start_time.desc())
+                            .limit(30)
+                        ).all()
+
+                    if search_kind in {"all", "request"}:
+                        request_filters = [
+                            PassengerRequest.from_location.ilike(q_like),
+                            PassengerRequest.to_location.ilike(q_like),
+                        ]
+                        if search_query_id is not None:
+                            request_filters.extend(
+                                [
+                                    PassengerRequest.id == search_query_id,
+                                    PassengerRequest.passenger_id == search_query_id,
+                                ]
+                            )
+                        search_requests = db.scalars(
+                            select(PassengerRequest)
+                            .where(or_(*request_filters))
+                            .order_by(PassengerRequest.created_at.desc())
+                            .limit(30)
+                        ).all()
+
+                    if search_kind in {"all", "claim"}:
+                        claim_filters = []
+                        if search_query_id is not None:
+                            claim_filters.extend(
+                                [
+                                    RequestClaim.id == search_query_id,
+                                    RequestClaim.driver_id == search_query_id,
+                                    RequestClaim.request_id == search_query_id,
+                                    RequestClaim.trip_id == search_query_id,
+                                ]
+                            )
+                        if claim_filters:
+                            search_claims = db.scalars(
+                                select(RequestClaim)
+                                .where(or_(*claim_filters))
+                                .order_by(RequestClaim.created_at.desc())
+                                .limit(30)
+                            ).all()
+
+                    if search_kind in {"all", "audit"}:
+                        audit_filters = [
+                            AdminAuditLog.actor_username.ilike(q_like),
+                            AdminAuditLog.action.ilike(q_like),
+                            AdminAuditLog.target_username.ilike(q_like),
+                            AdminAuditLog.details.ilike(q_like),
+                            AdminAuditLog.request_id.ilike(q_like),
+                        ]
+                        search_audit_logs = db.scalars(
+                            select(AdminAuditLog)
+                            .where(or_(*audit_filters))
+                            .order_by(AdminAuditLog.created_at.desc())
+                            .limit(30)
+                        ).all()
+
+                    if search_users:
+                        search_focus_user = search_users[0]
+                    elif search_query_id is not None:
+                        search_focus_user = db.scalar(select(User).where(User.id == search_query_id))
+                    elif search_tickets:
+                        first_ticket_uid = next(
+                            (t.user_id for t in search_tickets if t.user_id is not None),
+                            None,
+                        )
+                        if first_ticket_uid is not None:
+                            search_focus_user = db.scalar(select(User).where(User.id == first_ticket_uid))
+
+                    if search_focus_user is not None:
+                        focus_user_id = search_focus_user.id
+                        focus_tickets_open = db.scalar(
+                            select(func.count(SupportTicket.id)).where(
+                                SupportTicket.user_id == focus_user_id,
+                                SupportTicket.status.in_([TICKET_STATUS_OPEN, TICKET_STATUS_IN_PROGRESS]),
+                            )
+                        ) or 0
+                        focus_tickets_total = db.scalar(
+                            select(func.count(SupportTicket.id)).where(SupportTicket.user_id == focus_user_id)
+                        ) or 0
+                        focus_notifications_unread = db.scalar(
+                            select(func.count(UserNotification.id)).where(
+                                UserNotification.user_id == focus_user_id,
+                                UserNotification.is_read.is_(False),
+                            )
+                        ) or 0
+                        focus_driver_trips = db.scalar(
+                            select(func.count(DriverTrip.id)).where(DriverTrip.driver_id == focus_user_id)
+                        ) or 0
+                        focus_passenger_requests = db.scalar(
+                            select(func.count(PassengerRequest.id)).where(PassengerRequest.passenger_id == focus_user_id)
+                        ) or 0
+                        focus_claims = db.scalar(
+                            select(func.count(RequestClaim.id)).where(RequestClaim.driver_id == focus_user_id)
+                        ) or 0
+                        search_focus_stats = {
+                            "support_open": focus_tickets_open,
+                            "support_total": focus_tickets_total,
+                            "notifications_unread": focus_notifications_unread,
+                            "driver_trips": focus_driver_trips,
+                            "passenger_requests": focus_passenger_requests,
+                            "claims_as_driver": focus_claims,
+                            "driver_blocked": search_focus_user.driver_blocked,
+                            "role": search_focus_user.role.value if search_focus_user.role else "-",
+                            "password_set": bool(search_focus_user.password_hash),
+                        }
+
+                        focus_recent_requests = db.scalars(
+                            select(PassengerRequest)
+                            .where(PassengerRequest.passenger_id == focus_user_id)
+                            .order_by(PassengerRequest.created_at.desc())
+                            .limit(10)
+                        ).all()
+                        for req in focus_recent_requests:
+                            search_timeline.append(
+                                {
+                                    "at": req.created_at,
+                                    "kind": "request",
+                                    "title": f"Request #{req.id} ({req.status.value})",
+                                    "meta": f"{req.from_location} -> {req.to_location}, seats={req.seats_needed}",
+                                }
+                            )
+
+                        focus_recent_trips = db.scalars(
+                            select(DriverTrip)
+                            .where(DriverTrip.driver_id == focus_user_id)
+                            .order_by(DriverTrip.start_time.desc())
+                            .limit(10)
+                        ).all()
+                        for trip in focus_recent_trips:
+                            search_timeline.append(
+                                {
+                                    "at": trip.start_time,
+                                    "kind": "trip",
+                                    "title": f"Trip #{trip.id} ({trip.status.value})",
+                                    "meta": f"{trip.from_location} -> {trip.to_location}, {trip.seats_taken}/{trip.seats_total}",
+                                }
+                            )
+
+                        focus_recent_tickets = db.scalars(
+                            select(SupportTicket)
+                            .where(SupportTicket.user_id == focus_user_id)
+                            .order_by(SupportTicket.created_at.desc())
+                            .limit(10)
+                        ).all()
+                        for ticket in focus_recent_tickets:
+                            search_timeline.append(
+                                {
+                                    "at": ticket.created_at,
+                                    "kind": "support",
+                                    "title": f"Ticket #{ticket.id} ({ticket.status})",
+                                    "meta": f"source={ticket.source}, last_actor={ticket.last_actor}",
+                                }
+                            )
+
+                    for row in search_users:
+                        search_timeline.append(
+                            {
+                                "at": row.created_at,
+                                "kind": "user",
+                                "title": f"User #{row.id}",
+                                "meta": f"{row.phone}, role={row.role.value}",
+                            }
+                        )
+                    for row in search_tickets:
+                        search_timeline.append(
+                            {
+                                "at": row.created_at,
+                                "kind": "ticket",
+                                "title": f"Ticket #{row.id} ({row.status})",
+                                "meta": f"user={row.user_id or '-'}, phone={row.phone or '-'}",
+                            }
+                        )
+                    for row in search_trips:
+                        search_timeline.append(
+                            {
+                                "at": row.start_time,
+                                "kind": "trip",
+                                "title": f"Trip #{row.id} ({row.status.value})",
+                                "meta": f"driver={row.driver_id}, {row.from_location} -> {row.to_location}",
+                            }
+                        )
+                    for row in search_requests:
+                        search_timeline.append(
+                            {
+                                "at": row.created_at,
+                                "kind": "request",
+                                "title": f"Request #{row.id} ({row.status.value})",
+                                "meta": f"passenger={row.passenger_id}, {row.from_location} -> {row.to_location}",
+                            }
+                        )
+                    for row in search_claims:
+                        search_timeline.append(
+                            {
+                                "at": row.created_at,
+                                "kind": "claim",
+                                "title": f"Claim #{row.id} ({row.status.value})",
+                                "meta": f"trip={row.trip_id}, request={row.request_id}, driver={row.driver_id}",
+                            }
+                        )
+                    for row in search_audit_logs:
+                        search_timeline.append(
+                            {
+                                "at": row.created_at,
+                                "kind": "audit",
+                                "title": f"Audit: {row.action}",
+                                "meta": f"actor={row.actor_username}, target={row.target_username or '-'}",
+                            }
+                        )
+
+                    search_timeline.sort(
+                        key=lambda row: row.get("at") or datetime.fromtimestamp(0, tz=timezone.utc),
+                        reverse=True,
+                    )
+                    search_timeline = search_timeline[:120]
+                    search_summary = {
+                        "users": len(search_users),
+                        "tickets": len(search_tickets),
+                        "trips": len(search_trips),
+                        "requests": len(search_requests),
+                        "claims": len(search_claims),
+                        "audit_logs": len(search_audit_logs),
+                        "timeline": len(search_timeline),
+                    }
+                elif tab == "search360":
+                    search_error = "Qidiruv uchun kamida 1 ta so'z kiriting."
+            except SQLAlchemyError:
+                search_error = "Qidiruvda DB xatoligi yuz berdi. Jurnalni tekshiring."
+
         claim_acceptance_rate = (
             round((claims_period_accepted / claims_period_total) * 100.0, 1)
             if claims_period_total > 0
@@ -1225,6 +1578,19 @@ def admin_dashboard(request: Request):
             "overview_activity": overview_activity,
             "overview_action_breakdown": overview_action_breakdown,
             "overview_action_max": overview_action_max,
+            "search_query": search_query_input,
+            "search_kind": search_kind,
+            "search_summary": search_summary,
+            "search_users": search_users,
+            "search_tickets": search_tickets,
+            "search_trips": search_trips,
+            "search_requests": search_requests,
+            "search_claims": search_claims,
+            "search_audit_logs": search_audit_logs,
+            "search_timeline": search_timeline,
+            "search_focus_user": search_focus_user,
+            "search_focus_stats": search_focus_stats,
+            "search_error": search_error,
             "tab": tab,
             "trip_rows": trip_rows,
             "selected_trip_date": trip_date_raw or "",

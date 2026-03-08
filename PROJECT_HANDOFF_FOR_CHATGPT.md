@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, admin panel audit+SLA sync)
+Last updated: 2026-03-08 (Asia/Tashkent, admin panel search360 sync)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `20e3d7e`
+Main branch head (local before this handoff update): `79367af`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -30,6 +30,11 @@ Main branch head (local before this handoff update): `20e3d7e`
   - alert blok: support breach, waiting support, blocked drivers, parolsiz userlar, server errors
   - activity feed: user signup + trip done + support ticket + admin action
   - admin action breakdown (top actionlar, period bo'yicha)
+- Global Search + User 360 qo'shildi (`search360` tab):
+  - bitta qidiruvdan `user/ticket/trip/request/claim/audit` entitylarini topadi
+  - prefix query qo'llab-quvvatlanadi (`user:`, `ticket:`, `trip:`, `request:`, `claim:`, `audit:`)
+  - topilgan user uchun 360 summary (support, notif, trips, requests, claims)
+  - unified timeline (user/support/trip/request/claim/audit eventlar)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
 - Eslatma: productionda deploydan oldin:
@@ -404,6 +409,10 @@ Qila oladi:
 - Overview intelligence panel:
   - time window KPI (`24h/7d/30d/90d`)
   - alertlar + activity feed + admin action breakdown
+- Global Search + User 360 panel:
+  - cross-entity qidiruv (`user/ticket/trip/request/claim/audit`)
+  - prefix qidiruv (`user:`, `ticket:`, `trip:`, `request:`, `claim:`, `audit:`)
+  - topilgan user uchun 360 summary + unified timeline
 
 ---
 
