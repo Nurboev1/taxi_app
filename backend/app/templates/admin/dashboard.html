@@ -324,6 +324,163 @@
       background: #fff;
     }
 
+    .overview-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .kpi-card {
+      border: 1px solid #cfe4db;
+      background: linear-gradient(180deg, #ffffff, #f1faf6);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .kpi-card .k {
+      color: #5a7a70;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .kpi-card .v {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: 700;
+      font-family: "Space Grotesk", "Manrope", sans-serif;
+      color: #0f4e44;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-card .s {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #5f7e74;
+    }
+
+    .alert-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .alert-chip {
+      border-radius: 12px;
+      border: 1px solid;
+      padding: 10px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: #fff;
+    }
+
+    .alert-chip .title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .alert-chip .value {
+      font-family: "Space Grotesk", "Manrope", sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .alert-chip .hint {
+      font-size: 12px;
+      color: #5f7e74;
+      line-height: 1.35;
+    }
+
+    .alert-danger { border-color: #f4b5b5; background: #fff2f2; color: #9f1f1f; }
+    .alert-warn { border-color: #f6d5a7; background: #fff8ef; color: #965203; }
+    .alert-info { border-color: #b7d6f7; background: #eff7ff; color: #1f4f7e; }
+    .alert-ok { border-color: #bde7cb; background: #ecfbf2; color: #166538; }
+
+    .activity-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 12px;
+    }
+
+    .timeline {
+      border: 1px solid #d9ebe4;
+      border-radius: 12px;
+      background: #fcfffd;
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .timeline-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e6f1ed;
+    }
+
+    .timeline-item:last-child { border-bottom: 0; }
+
+    .timeline-item .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1f3f37;
+    }
+
+    .timeline-item .meta {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #607f76;
+    }
+
+    .action-bars {
+      border: 1px solid #d9ebe4;
+      border-radius: 12px;
+      background: #fcfffd;
+      padding: 10px 11px;
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .action-row { margin-bottom: 10px; }
+
+    .action-row .meta {
+      margin: 0 0 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #325b51;
+      gap: 8px;
+    }
+
+    .action-row .track {
+      height: 8px;
+      border-radius: 999px;
+      background: #e3f1eb;
+      overflow: hidden;
+    }
+
+    .action-row .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0f766e, #20b8a5);
+      border-radius: 999px;
+    }
+
     .status-chip {
       display: inline-flex;
       align-items: center;
@@ -472,6 +629,7 @@
       .hero { padding: 16px; flex-direction: column; }
       .hero-actions { justify-content: flex-start; }
       .grid { grid-template-columns: 1fr; }
+      .activity-grid { grid-template-columns: 1fr; }
       .shell { padding: 14px 12px 24px; }
       .stat .v { font-size: 24px; }
     }
@@ -519,7 +677,114 @@
     </section>
 
     {% if tab == 'overview' %}
-      <div class="grid">
+      <section class="card">
+        <h3>Overview Intelligence</h3>
+        <div class="body">
+          <form class="overview-toolbar" method="get" action="/admin">
+            <input type="hidden" name="tab" value="overview" />
+            <div class="filters" style="margin:0;">
+              <label for="overview_window">Time window:</label>
+              <select id="overview_window" name="overview_window">
+                <option value="24h" {% if overview_window == '24h' %}selected{% endif %}>24h</option>
+                <option value="7d" {% if overview_window == '7d' %}selected{% endif %}>7d</option>
+                <option value="30d" {% if overview_window == '30d' %}selected{% endif %}>30d</option>
+                <option value="90d" {% if overview_window == '90d' %}selected{% endif %}>90d</option>
+              </select>
+              <button type="submit">Yangilash</button>
+            </div>
+            <div class="meta">{{ overview_kpis.window_label }}</div>
+          </form>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="k">Yangi userlar</div>
+              <div class="v">{{ overview_kpis.users_new }}</div>
+              <div class="s">Parolsiz userlar: {{ overview_kpis.users_without_password_total }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="k">Yangi safarlar</div>
+              <div class="v">{{ overview_kpis.trips_new }}</div>
+              <div class="s">Done: {{ overview_kpis.trips_done }}, Active: {{ overview_kpis.active_trips }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="k">Yangi so'rovlar</div>
+              <div class="v">{{ overview_kpis.requests_new }}</div>
+              <div class="s">Hozir faol: {{ overview_kpis.requests_active }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="k">Claim acceptance</div>
+              <div class="v">{{ overview_kpis.claim_acceptance_rate }}%</div>
+              <div class="s">Jami claimlar: {{ overview_kpis.claims_period_total }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="k">Trip fill rate</div>
+              <div class="v">{{ overview_kpis.avg_trip_fill_pct }}%</div>
+              <div class="s">Bloklangan driverlar: {{ overview_kpis.blocked_drivers_total }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="k">Xabarlar</div>
+              <div class="v">{{ overview_kpis.messages_period }}</div>
+              <div class="s">Notif: +{{ overview_kpis.notifications_period }}, unread={{ overview_kpis.notifications_unread }}</div>
+            </div>
+            {% if overview_kpis.support_visible %}
+              <div class="kpi-card">
+                <div class="k">Support open</div>
+                <div class="v">{{ overview_kpis.support_open_now }}</div>
+                <div class="s">Yangi: {{ overview_kpis.support_new_period }}, waiting: {{ overview_kpis.support_waiting_support }}</div>
+              </div>
+              <div class="kpi-card">
+                <div class="k">First response</div>
+                <div class="v">{{ overview_kpis.support_first_response_avg_minutes if overview_kpis.support_first_response_avg_minutes is not none else '-' }}</div>
+                <div class="s">Breach: {{ overview_kpis.support_breached }}</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="alert-list">
+            {% for alert in overview_alerts %}
+              <div class="alert-chip alert-{{ alert.level }}">
+                <div class="title">{{ alert.title }}</div>
+                <div class="value">{{ alert.value }}</div>
+                <div class="hint">{{ alert.hint }}</div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="activity-grid">
+            <section>
+              <div class="meta" style="margin:0 0 8px;">Activity feed</div>
+              <div class="timeline">
+                {% for row in overview_activity %}
+                  <div class="timeline-item">
+                    <div class="head">
+                      <span>{{ row.title }}</span>
+                      <span>{{ row.at }}</span>
+                    </div>
+                    <div class="meta">{{ row.kind }} | {{ row.meta }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            </section>
+            <section>
+              <div class="meta" style="margin:0 0 8px;">Top admin actions ({{ overview_kpis.window_label }})</div>
+              <div class="action-bars">
+                {% if overview_action_breakdown %}
+                  {% for row in overview_action_breakdown %}
+                    <div class="action-row">
+                      <div class="meta"><span>{{ row.action }}</span><strong>{{ row.count }}</strong></div>
+                      <div class="track"><div class="fill" style="width: {{ (row.count * 100 / overview_action_max)|round(1) }}%"></div></div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="meta">Bu periodda admin action topilmadi.</div>
+                {% endif %}
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid" style="margin-top:12px;">
         <section class="card">
           <h3>Oxirgi foydalanuvchilar</h3>
           <div class="body">

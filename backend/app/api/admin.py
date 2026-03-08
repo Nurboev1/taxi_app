@@ -73,6 +73,18 @@ ADMIN_TAB_ACCESS = {
 
 SUPPORT_TICKET_ESCALATE_MINUTES = 30
 SUPPORT_TICKET_AUTO_CLOSE_HOURS = 24
+OVERVIEW_WINDOWS_HOURS = {
+    "24h": 24,
+    "7d": 24 * 7,
+    "30d": 24 * 30,
+    "90d": 24 * 90,
+}
+OVERVIEW_WINDOW_LABELS = {
+    "24h": "So'nggi 24 soat",
+    "7d": "So'nggi 7 kun",
+    "30d": "So'nggi 30 kun",
+    "90d": "So'nggi 90 kun",
+}
 
 
 def _normalize_admin_role(role: str | None) -> str:
@@ -521,6 +533,10 @@ def admin_dashboard(request: Request):
         support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
         if support_ticket_filter not in {"all", "open", "in_progress", "closed"}:
             support_ticket_filter = "open"
+        overview_window = (request.query_params.get("overview_window", "7d") or "7d").strip().lower()
+        if overview_window not in OVERVIEW_WINDOWS_HOURS:
+            overview_window = "7d"
+        overview_since = datetime.now(timezone.utc) - timedelta(hours=OVERVIEW_WINDOWS_HOURS[overview_window])
         error_service_raw = request.query_params.get("error_service", "safaruz-backend")
         error_lines_raw = request.query_params.get("error_lines", "300")
         lookup_user: User | None = None
@@ -532,6 +548,7 @@ def admin_dashboard(request: Request):
         admin_accounts_error: str | None = None
         admin_audit_logs: list[AdminAuditLog] = []
         support_tickets: list[SupportTicket] = []
+        support_recent_for_overview: list[SupportTicket] = []
         support_ticket_messages: dict[int, list[SupportTicketMessage]] = {}
         support_ticket_sla: dict[int, dict[str, object]] = {}
         support_sla_summary = {
@@ -541,6 +558,17 @@ def admin_dashboard(request: Request):
             "escalated": 0,
             "breached": 0,
         }
+        overview_kpis: dict[str, object] = {}
+        overview_alerts: list[dict[str, object]] = []
+        overview_activity: list[dict[str, object]] = []
+        overview_action_breakdown: list[dict[str, object]] = []
+        overview_action_max = 1
+        support_open_now = 0
+        support_new_period = 0
+        support_waiting_support = 0
+        support_breached = 0
+        support_first_response_avg_minutes: float | None = None
+        audit_actions_period = 0
         support_tickets_error: str | None = None
         resource_metrics = _collect_resource_metrics()
         try:
@@ -558,6 +586,54 @@ def admin_dashboard(request: Request):
         chats_total = db.scalar(select(func.count(Chat.id))) or 0
         messages_total = db.scalar(select(func.count(ChatMessage.id))) or 0
         ratings_total = db.scalar(select(func.count(TripRating.id))) or 0
+        blocked_drivers_total = db.scalar(select(func.count(User.id)).where(User.driver_blocked.is_(True))) or 0
+        users_without_password_total = db.scalar(select(func.count(User.id)).where(User.password_hash.is_(None))) or 0
+        users_new_period = db.scalar(select(func.count(User.id)).where(User.created_at >= overview_since)) or 0
+        trips_new_period = db.scalar(select(func.count(DriverTrip.id)).where(DriverTrip.created_at >= overview_since)) or 0
+        trips_done_period = db.scalar(
+            select(func.count(DriverTrip.id)).where(
+                DriverTrip.status == TripStatus.done,
+                DriverTrip.start_time >= overview_since,
+            )
+        ) or 0
+        active_trips_now = db.scalar(
+            select(func.count(DriverTrip.id)).where(
+                DriverTrip.status.in_([TripStatus.open, TripStatus.full]),
+            )
+        ) or 0
+        avg_trip_fill_pct_raw = db.scalar(
+            select(
+                func.avg(
+                    (DriverTrip.seats_taken * 100.0) / func.nullif(DriverTrip.seats_total, 0)
+                )
+            ).where(DriverTrip.status.in_([TripStatus.open, TripStatus.full, TripStatus.done]))
+        )
+        requests_new_period = db.scalar(
+            select(func.count(PassengerRequest.id)).where(PassengerRequest.created_at >= overview_since)
+        ) or 0
+        requests_active_now = db.scalar(
+            select(func.count(PassengerRequest.id)).where(
+                PassengerRequest.status.in_([RequestStatus.open, RequestStatus.locked, RequestStatus.chosen]),
+            )
+        ) or 0
+        claims_period_total = db.scalar(
+            select(func.count(RequestClaim.id)).where(RequestClaim.created_at >= overview_since)
+        ) or 0
+        claims_period_accepted = db.scalar(
+            select(func.count(RequestClaim.id)).where(
+                RequestClaim.created_at >= overview_since,
+                RequestClaim.status.in_([ClaimStatus.accepted, ClaimStatus.completed]),
+            )
+        ) or 0
+        messages_period = db.scalar(
+            select(func.count(ChatMessage.id)).where(ChatMessage.created_at >= overview_since)
+        ) or 0
+        notifications_unread_total = db.scalar(
+            select(func.count(UserNotification.id)).where(UserNotification.is_read.is_(False))
+        ) or 0
+        notifications_period = db.scalar(
+            select(func.count(UserNotification.id)).where(UserNotification.created_at >= overview_since)
+        ) or 0
 
         recent_users = db.scalars(select(User).order_by(User.created_at.desc()).limit(10)).all()
         recent_requests = db.scalars(select(PassengerRequest).order_by(PassengerRequest.created_at.desc()).limit(10)).all()
@@ -778,6 +854,25 @@ def admin_dashboard(request: Request):
                 if audit_request_id:
                     audit_stmt = audit_stmt.where(AdminAuditLog.request_id.ilike(f"%{audit_request_id}%"))
                 admin_audit_logs = db.scalars(audit_stmt.limit(audit_limit)).all()
+                audit_actions_period = db.scalar(
+                    select(func.count(AdminAuditLog.id)).where(AdminAuditLog.created_at >= overview_since)
+                ) or 0
+                action_rows = db.execute(
+                    select(
+                        AdminAuditLog.action,
+                        func.count(AdminAuditLog.id).label("action_count"),
+                    )
+                    .where(AdminAuditLog.created_at >= overview_since)
+                    .group_by(AdminAuditLog.action)
+                    .order_by(func.count(AdminAuditLog.id).desc())
+                    .limit(6)
+                ).all()
+                overview_action_breakdown = [
+                    {"action": row[0], "count": int(row[1] or 0)}
+                    for row in action_rows
+                ]
+                if overview_action_breakdown:
+                    overview_action_max = max(r["count"] for r in overview_action_breakdown) or 1
             except SQLAlchemyError:
                 admin_accounts = []
                 admin_audit_logs = []
@@ -790,6 +885,69 @@ def admin_dashboard(request: Request):
                 if support_ticket_filter != "all":
                     tickets_stmt = tickets_stmt.where(SupportTicket.status == support_ticket_filter)
                 support_tickets = db.scalars(tickets_stmt.limit(300)).all()
+                support_open_now = db.scalar(
+                    select(func.count(SupportTicket.id)).where(
+                        SupportTicket.status.in_([TICKET_STATUS_OPEN, TICKET_STATUS_IN_PROGRESS]),
+                    )
+                ) or 0
+                support_new_period = db.scalar(
+                    select(func.count(SupportTicket.id)).where(SupportTicket.created_at >= overview_since)
+                ) or 0
+                support_recent_for_overview = db.scalars(
+                    select(SupportTicket).order_by(SupportTicket.created_at.desc()).limit(6)
+                ).all()
+                support_waiting_support = db.scalar(
+                    select(func.count(SupportTicket.id)).where(
+                        SupportTicket.status.in_([TICKET_STATUS_OPEN, TICKET_STATUS_IN_PROGRESS]),
+                        SupportTicket.last_actor != SENDER_SUPPORT,
+                    )
+                ) or 0
+                support_breached = db.scalar(
+                    select(func.count(SupportTicket.id)).where(
+                        SupportTicket.status.in_([TICKET_STATUS_OPEN, TICKET_STATUS_IN_PROGRESS]),
+                        SupportTicket.last_actor == SENDER_SUPPORT,
+                        SupportTicket.last_activity_at
+                        < datetime.now(timezone.utc) - timedelta(hours=SUPPORT_TICKET_AUTO_CLOSE_HOURS),
+                    )
+                ) or 0
+                period_ticket_rows = db.execute(
+                    select(SupportTicket.id, SupportTicket.created_at)
+                    .where(SupportTicket.created_at >= overview_since)
+                    .order_by(SupportTicket.created_at.desc())
+                    .limit(500)
+                ).all()
+                if period_ticket_rows:
+                    period_ticket_created = {int(row[0]): row[1] for row in period_ticket_rows}
+                    support_period_msgs = db.scalars(
+                        select(SupportTicketMessage)
+                        .where(
+                            SupportTicketMessage.ticket_id.in_(list(period_ticket_created.keys())),
+                            SupportTicketMessage.sender_role == SENDER_SUPPORT,
+                        )
+                        .order_by(
+                            SupportTicketMessage.ticket_id.asc(),
+                            SupportTicketMessage.created_at.asc(),
+                        )
+                    ).all()
+                    first_response_at: dict[int, datetime] = {}
+                    for msg in support_period_msgs:
+                        if msg.ticket_id not in first_response_at:
+                            first_response_at[msg.ticket_id] = msg.created_at
+                    response_minutes = [
+                        max(
+                            0.0,
+                            (
+                                first_response_at[ticket_id]
+                                - period_ticket_created[ticket_id]
+                            ).total_seconds()
+                            / 60.0,
+                        )
+                        for ticket_id in first_response_at
+                    ]
+                    if response_minutes:
+                        support_first_response_avg_minutes = round(
+                            sum(response_minutes) / len(response_minutes), 1
+                        )
                 ticket_ids = [t.id for t in support_tickets]
                 if ticket_ids:
                     message_rows = db.scalars(
@@ -854,9 +1012,153 @@ def admin_dashboard(request: Request):
                 )
             except SQLAlchemyError:
                 support_tickets = []
+                support_recent_for_overview = []
                 support_ticket_messages = {}
                 support_ticket_sla = {}
                 support_tickets_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
+
+        claim_acceptance_rate = (
+            round((claims_period_accepted / claims_period_total) * 100.0, 1)
+            if claims_period_total > 0
+            else 0.0
+        )
+        avg_trip_fill_pct = round(float(avg_trip_fill_pct_raw), 1) if avg_trip_fill_pct_raw is not None else 0.0
+        support_visible = _can_access_tab(admin_role, "support_tickets")
+        overview_kpis = {
+            "window_key": overview_window,
+            "window_label": OVERVIEW_WINDOW_LABELS.get(overview_window, overview_window),
+            "users_new": users_new_period,
+            "trips_new": trips_new_period,
+            "trips_done": trips_done_period,
+            "active_trips": active_trips_now,
+            "requests_new": requests_new_period,
+            "requests_active": requests_active_now,
+            "claims_period_total": claims_period_total,
+            "claim_acceptance_rate": claim_acceptance_rate,
+            "messages_period": messages_period,
+            "notifications_period": notifications_period,
+            "notifications_unread": notifications_unread_total,
+            "avg_trip_fill_pct": avg_trip_fill_pct,
+            "blocked_drivers_total": blocked_drivers_total,
+            "users_without_password_total": users_without_password_total,
+            "support_visible": support_visible,
+            "support_open_now": support_open_now,
+            "support_new_period": support_new_period,
+            "support_waiting_support": support_waiting_support,
+            "support_breached": support_breached,
+            "support_first_response_avg_minutes": support_first_response_avg_minutes,
+            "audit_actions_period": audit_actions_period,
+        }
+
+        if support_visible and support_breached > 0:
+            overview_alerts.append(
+                {
+                    "level": "danger",
+                    "title": "Support breach",
+                    "value": support_breached,
+                    "hint": "24 soat oynasidan oshgan ochiq/in_progress ticketlar bor.",
+                }
+            )
+        if support_visible and support_waiting_support > 0:
+            overview_alerts.append(
+                {
+                    "level": "warn",
+                    "title": "Support navbati",
+                    "value": support_waiting_support,
+                    "hint": "Support javobini kutayotgan ticketlar.",
+                }
+            )
+        if blocked_drivers_total > 0:
+            overview_alerts.append(
+                {
+                    "level": "warn",
+                    "title": "Bloklangan haydovchilar",
+                    "value": blocked_drivers_total,
+                    "hint": "Driver access tekshiruvini va appeal oqimini ko'rib chiqing.",
+                }
+            )
+        if users_without_password_total > 0:
+            overview_alerts.append(
+                {
+                    "level": "info",
+                    "title": "Parolsiz userlar",
+                    "value": users_without_password_total,
+                    "hint": "Eski userlar uchun password onboarding kampaniyasi kerak bo'lishi mumkin.",
+                }
+            )
+        server_error_count = int(server_errors.get("error_count", 0)) if server_errors.get("available") else 0
+        if server_error_count > 0:
+            overview_alerts.append(
+                {
+                    "level": "danger",
+                    "title": "Server xatoliklari",
+                    "value": server_error_count,
+                    "hint": "Errors tabdan so'nggi stack trace'larni tekshiring.",
+                }
+            )
+        if not overview_alerts:
+            overview_alerts.append(
+                {
+                    "level": "ok",
+                    "title": "Stable",
+                    "value": "OK",
+                    "hint": "Hozircha kritik alert kuzatilmadi.",
+                }
+            )
+
+        for user in recent_users[:5]:
+            overview_activity.append(
+                {
+                    "at": user.created_at,
+                    "kind": "new_user",
+                    "title": f"Yangi user #{user.id}",
+                    "meta": f"{user.phone} | role={user.role.value}",
+                }
+            )
+
+        recent_done_trips = db.scalars(
+            select(DriverTrip)
+            .where(DriverTrip.status == TripStatus.done)
+            .order_by(DriverTrip.start_time.desc())
+            .limit(6)
+        ).all()
+        for trip in recent_done_trips:
+            overview_activity.append(
+                {
+                    "at": trip.start_time,
+                    "kind": "trip_done",
+                    "title": f"Trip #{trip.id} yakunlandi",
+                    "meta": f"{trip.from_location} -> {trip.to_location}",
+                }
+            )
+
+        if support_visible:
+            for ticket in support_recent_for_overview[:6]:
+                overview_activity.append(
+                    {
+                        "at": ticket.created_at,
+                        "kind": "support_ticket",
+                        "title": f"Support ticket #{ticket.id}",
+                        "meta": f"status={ticket.status}, user={ticket.user_id or '-'}",
+                    }
+                )
+
+        if _can_access_tab(admin_role, "admin_accounts"):
+            for log in admin_audit_logs[:6]:
+                overview_activity.append(
+                    {
+                        "at": log.created_at,
+                        "kind": "admin_action",
+                        "title": f"Admin action: {log.action}",
+                        "meta": f"actor={log.actor_username}, target={log.target_username or '-'}",
+                    }
+                )
+
+        overview_activity.sort(
+            key=lambda row: row.get("at") or datetime.fromtimestamp(0, tz=timezone.utc),
+            reverse=True,
+        )
+        overview_activity = overview_activity[:16]
     finally:
         db.close()
 
@@ -916,6 +1218,13 @@ def admin_dashboard(request: Request):
             },
             "recent_users": recent_users,
             "recent_requests": recent_requests,
+            "overview_window": overview_window,
+            "overview_window_labels": OVERVIEW_WINDOW_LABELS,
+            "overview_kpis": overview_kpis,
+            "overview_alerts": overview_alerts,
+            "overview_activity": overview_activity,
+            "overview_action_breakdown": overview_action_breakdown,
+            "overview_action_max": overview_action_max,
             "tab": tab,
             "trip_rows": trip_rows,
             "selected_trip_date": trip_date_raw or "",

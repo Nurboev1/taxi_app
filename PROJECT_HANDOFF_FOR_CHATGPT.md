@@ -23,6 +23,13 @@ Main branch head (local before this handoff update): `20e3d7e`
   - yangi login sahifasi (`backend/app/templates/admin/login.html`)
   - yangi dashboard vizual tizimi (`backend/app/templates/admin/dashboard.html`)
   - responsive layout, zamonaviy card/hero/tab kompozitsiyasi
+- Dashboard logikasi yangilandi (overview tab):
+  - vaqt oynasi filteri qo'shildi (`24h`, `7d`, `30d`, `90d`)
+  - yangi KPIlar: yangi user/safar/so'rov, claim acceptance rate, trip fill rate, notif/chat trend
+  - support KPIlar: open/waiting/breach/avg first response
+  - alert blok: support breach, waiting support, blocked drivers, parolsiz userlar, server errors
+  - activity feed: user signup + trip done + support ticket + admin action
+  - admin action breakdown (top actionlar, period bo'yicha)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
 - Eslatma: productionda deploydan oldin:
@@ -394,6 +401,9 @@ Qila oladi:
 - Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) faqat `superadmin`
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
 - Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
+- Overview intelligence panel:
+  - time window KPI (`24h/7d/30d/90d`)
+  - alertlar + activity feed + admin action breakdown
 
 ---
 
