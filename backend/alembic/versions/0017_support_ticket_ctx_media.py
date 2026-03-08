@@ -1,6 +1,6 @@
 """add support ticket context and media metadata
 
-Revision ID: 0017_support_ticket_context_media
+Revision ID: 0017_support_ticket_ctx_media
 Revises: 0016_admin_audit_log_metadata
 Create Date: 2026-03-08
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0017_support_ticket_context_media"
+revision: str = "0017_support_ticket_ctx_media"
 down_revision: Union[str, None] = "0016_admin_audit_log_metadata"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

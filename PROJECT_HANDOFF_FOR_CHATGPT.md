@@ -1,6 +1,6 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, telegram support context/media/privacy sync)
+Last updated: 2026-03-08 (Asia/Tashkent, telegram support migration-id hotfix)
 Repository: `Nurboev1/taxi_app`
 Main branch head (local before this handoff update): `4827913`
 
@@ -46,7 +46,7 @@ Main branch head (local before this handoff update): `4827913`
   - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
-  - `backend/alembic/versions/0017_support_ticket_context_media.py`
+  - `backend/alembic/versions/0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`, `alembic_version` `varchar(32)` limitga mos)
 - Eslatma: productionda deploydan oldin:
   - `cd /opt/safaruz/backend`
   - `source .venv/bin/activate`
@@ -454,7 +454,7 @@ Migrations:
 - `0014_ticket_messages.py`
 - `0015_request_seat_mix.py`
 - `0016_admin_audit_log_metadata.py`
-- `0017_support_ticket_context_media.py`
+- `0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`)
 
 Asosiy jadvallar:
 - `users`
@@ -764,7 +764,7 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 4. `strings.dart`dagi RU encodingni tozalash.
 5. Auth legacy endpoint (`/verify-otp`) ni bosqichma-bosqich o'chirish rejasini qilish.
 6. CORS, admin creds, secrets bo'yicha production hardening.
-7. `alembic upgrade head` bilan oxirgi migrationlarni (`0017_support_ticket_context_media`gacha) productionga qo'llash.
+7. `alembic upgrade head` bilan oxirgi migrationlarni (`0017_support_ticket_ctx_media`gacha) productionga qo'llash.
 8. Minimal integration testlar yozish:
    - register/reset/login
    - claim/choose

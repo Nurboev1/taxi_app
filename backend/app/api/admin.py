@@ -983,6 +983,7 @@ def admin_dashboard(request: Request):
                 if overview_action_breakdown:
                     overview_action_max = max(r["count"] for r in overview_action_breakdown) or 1
             except SQLAlchemyError:
+                db.rollback()
                 admin_accounts = []
                 admin_audit_logs = []
                 admin_accounts_error = "DB sxemasi eski. `alembic upgrade head` ishlating."
@@ -1120,6 +1121,7 @@ def admin_dashboard(request: Request):
                     )
                 )
             except SQLAlchemyError:
+                db.rollback()
                 support_tickets = []
                 support_recent_for_overview = []
                 support_ticket_messages = {}
@@ -1412,6 +1414,7 @@ def admin_dashboard(request: Request):
                 elif tab == "search360":
                     search_error = "Qidiruv uchun kamida 1 ta so'z kiriting."
             except SQLAlchemyError:
+                db.rollback()
                 search_error = "Qidiruvda DB xatoligi yuz berdi. Jurnalni tekshiring."
 
         claim_acceptance_rate = (
