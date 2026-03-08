@@ -1258,6 +1258,8 @@
             <div class="error">Status noto'g'ri qiymatda yuborildi.</div>
           {% elif support_tickets_status == 'invalid_reply_template' %}
             <div class="error">Saved reply topilmadi. Qaytadan tanlang.</div>
+          {% elif support_tickets_status == 'manual_status_disabled' %}
+            <div class="notice">Ticket statusini admin o'zgartira olmaydi. Status faqat user `/close` yoki 24h auto-close orqali o'zgaradi.</div>
           {% endif %}
 
           <div class="ticket-sla">
@@ -1371,19 +1373,7 @@
                   Pending: <strong>{{ sla.get('pending_minutes', 0) }} min</strong>
                 </div>
 
-                {% if admin_role in ['superadmin', 'support'] and row.status != 'closed' %}
-                  <form class="filters" method="post" action="/admin/support-tickets/status" style="margin-top:10px;">
-                    <input type="hidden" name="ticket_id" value="{{ row.id }}" />
-                    <input type="hidden" name="support_ticket_filter" value="{{ support_ticket_filter }}" />
-                    <label for="status_{{ row.id }}">Status:</label>
-                    <select id="status_{{ row.id }}" name="new_status">
-                      <option value="open" {% if row.status == 'open' %}selected{% endif %}>open</option>
-                      <option value="in_progress" {% if row.status == 'in_progress' %}selected{% endif %}>in_progress</option>
-                      <option value="closed" {% if row.status == 'closed' %}selected{% endif %}>closed</option>
-                    </select>
-                    <button type="submit">Statusni saqlash</button>
-                  </form>
-                {% endif %}
+                <div class="meta" style="margin-top:10px;">Status admin tomonidan qo'lda o'zgartirilmaydi.</div>
 
                 <div class="chat-wrap">
                   {% for msg in support_ticket_messages.get(row.id, []) %}

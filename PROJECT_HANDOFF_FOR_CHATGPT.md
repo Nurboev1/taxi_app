@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, telegram media deeplink button)
+Last updated: 2026-03-08 (Asia/Tashkent, support ticket status ownership fix)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `45709c2`
+Main branch head (local before this handoff update): `696aa15`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -17,8 +17,9 @@ Main branch head (local before this handoff update): `45709c2`
   - eskalatsiya qoidası: support navbati 30+ daqiqa (`SUPPORT_TICKET_ESCALATE_MINUTES=30`)
   - breach ko'rsatkichi: support javobidan keyin 24 soat oynasi (`SUPPORT_TICKET_AUTO_CLOSE_HOURS=24`)
   - ticketlar SLA og'irligiga qarab sortlanadi (breached/escalated birinchi)
-- Support ticket status boshqaruvi kengaydi:
-  - `superadmin` endi ticket detail modal ichidan statusni `open/in_progress/closed`ga o'zgartira oladi
+- Support ticket status ownership qat'iylashtirildi:
+  - admin paneldan qo'lda status o'zgartirish o'chirildi
+  - status faqat user (`/close`) yoki 24h auto-close orqali o'zgaradi
 - Admin panel UI to'liq qayta dizayn qilindi:
   - yangi login sahifasi (`backend/app/templates/admin/login.html`)
   - yangi dashboard vizual tizimi (`backend/app/templates/admin/dashboard.html`)
@@ -45,7 +46,7 @@ Main branch head (local before this handoff update): `45709c2`
   - ticket table/modalda context (`trip/request/claim`) ko'rinadi
   - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
   - media message uchun `Telegramda ochish` tugmasi qo'shildi (support group message deep-link)
-  - ticket statusini o'zgartirish endi `superadmin` + `support` uchun ochildi
+  - ticket statusi UIda qo'lda o'zgartirilmaydi (faqat user `/close` yoki 24h auto-close)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
   - `backend/alembic/versions/0017_support_ticket_ctx_media.py` (revision id: `0017_support_ticket_ctx_media`, `alembic_version` `varchar(32)` limitga mos)
@@ -408,7 +409,7 @@ Endpointlar:
 - `/admin` dashboard
 - `/admin/driver-access` (block/unblock)
 - `/admin/change-password` (POST)
-- `/admin/support-tickets/status` (POST)
+- `/admin/support-tickets/status` (POST, manual change disabled; compatibility endpoint)
 - `/admin/support-tickets/reply` (POST)
 
 Qila oladi:
@@ -423,7 +424,7 @@ Qila oladi:
 - Support ticketlarni chat ko'rinishida ochib ko'rish (`support`/`superadmin`)
 - Support javob yuborish (`support`/`superadmin`)
 - Saved reply template tanlab tez javob yuborish (`support`/`superadmin`)
-- Ticket statusini qo'lda o'zgartirish (`/admin/support-tickets/status`) `superadmin` + `support`
+- Ticket statusini qo'lda o'zgartirish admin panelda o'chirilgan
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
 - Ticket context (`trip/request/claim`) va media metadata ko'rish
 - Media xabardan Telegram support groupdagi original postga o'tish (`Telegramda ochish` deep-link)

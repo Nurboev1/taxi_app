@@ -1782,59 +1782,15 @@ def admin_support_ticket_status(
             status_code=302,
         )
 
-    normalized_status = (new_status or "").strip().lower()
-    if normalized_status not in {"open", "in_progress", "closed"}:
-        return RedirectResponse(
-            url="/admin?tab=support_tickets&support_tickets_status=invalid_status",
-            status_code=302,
-        )
-
     normalized_filter = (support_ticket_filter or "open").strip().lower()
     if normalized_filter not in {"all", "open", "in_progress", "closed"}:
         normalized_filter = "open"
-
-    db: Session = SessionLocal()
-    try:
-        ticket = db.scalar(select(SupportTicket).where(SupportTicket.id == ticket_id))
-        if not ticket:
-            return RedirectResponse(
-                url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=not_found",
-                status_code=302,
-            )
-        before_state = {
-            "status": ticket.status,
-            "last_actor": ticket.last_actor,
-            "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
-        }
-        ticket.status = normalized_status
-        ticket.updated_at = datetime.now(timezone.utc)
-        db.add(ticket)
-        _write_admin_audit_log(
-            request=request,
-            db=db,
-            actor_username=admin_session["username"],
-            action="support_ticket_status_updated",
-            target_username=str(ticket.user_id) if ticket.user_id is not None else None,
-            details=f"ticket_id={ticket.id},status={normalized_status}",
-            before_state=before_state,
-            after_state={
-                "status": ticket.status,
-                "last_actor": ticket.last_actor,
-                "last_activity_at": ticket.last_activity_at.isoformat() if ticket.last_activity_at else None,
-            },
-        )
-        db.commit()
-    except SQLAlchemyError:
-        db.rollback()
-        return RedirectResponse(
-            url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=db_error",
-            status_code=302,
-        )
-    finally:
-        db.close()
-
+    _ = new_status
     return RedirectResponse(
-        url=f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}&support_tickets_status=updated",
+        url=(
+            f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
+            f"&support_tickets_status=manual_status_disabled&support_ticket_open={ticket_id}"
+        ),
         status_code=302,
     )
 
