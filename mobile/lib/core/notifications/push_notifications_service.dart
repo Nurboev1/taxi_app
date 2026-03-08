@@ -32,10 +32,16 @@ class PushNotificationsService {
 
       final token = await messaging.getToken();
       if (token != null && token.isNotEmpty) {
+        await ref.read(secureStoreProvider).savePushNotificationsReady(true);
         await _registerToken(token);
+      } else {
+        await ref.read(secureStoreProvider).savePushNotificationsReady(false);
       }
 
       _onTokenRefreshSub = messaging.onTokenRefresh.listen((token) {
+        unawaited(ref.read(secureStoreProvider).savePushNotificationsReady(
+              token.isNotEmpty,
+            ));
         unawaited(_registerToken(token));
       });
 
@@ -43,13 +49,15 @@ class PushNotificationsService {
         final title = message.notification?.title ??
             message.data['title']?.toString() ??
             'SafarUz';
-        final body =
-            message.notification?.body ?? message.data['body']?.toString() ?? '';
+        final body = message.notification?.body ??
+            message.data['body']?.toString() ??
+            '';
         await ref
             .read(localNotificationsServiceProvider)
             .showNotification(id: message.hashCode, title: title, body: body);
       });
     } catch (_) {
+      await ref.read(secureStoreProvider).savePushNotificationsReady(false);
       // Firebase might be unavailable if google-services config is missing.
       // Polling notifications still works as fallback.
     }
@@ -58,9 +66,9 @@ class PushNotificationsService {
   Future<void> _registerToken(String token) async {
     try {
       await ref.read(apiClientProvider).post(
-            Endpoints.pushToken,
-            data: {'token': token},
-          );
+        Endpoints.pushToken,
+        data: {'token': token},
+      );
     } catch (_) {
       // Keep silent; token refresh will retry later.
     }

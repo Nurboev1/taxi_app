@@ -38,12 +38,19 @@ class NotificationPoller {
       final items = (res.data as List).cast<Map<String, dynamic>>();
       final shownIds =
           await ref.read(secureStoreProvider).readShownNotificationIds();
+      final pushNotificationsReady =
+          await ref.read(secureStoreProvider).readPushNotificationsReady();
       final service = ref.read(localNotificationsServiceProvider);
 
       for (final item in items) {
         final id = item['id'] as int?;
         final isRead = item['is_read'] == true;
         if (id == null || isRead || shownIds.contains(id)) continue;
+
+        if (pushNotificationsReady) {
+          shownIds.add(id);
+          continue;
+        }
 
         final title = item['title']?.toString() ?? 'SafarUz';
         final body = item['body']?.toString() ?? '';

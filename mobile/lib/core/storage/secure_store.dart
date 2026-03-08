@@ -8,6 +8,7 @@ class SecureStore {
   static const _chatIdKey = 'current_chat_id';
   static const _darkModeKey = 'dark_mode';
   static const _shownNotificationIdsKey = 'shown_notification_ids';
+  static const _pushNotificationsReadyKey = 'push_notifications_ready';
   static const _passengerTutorialSeenKey = 'tutorial_seen_passenger_home';
   static const _driverTutorialSeenKey = 'tutorial_seen_driver_home';
 
@@ -70,6 +71,16 @@ class SecureStore {
         sorted.length > 400 ? sorted.sublist(sorted.length - 400) : sorted;
     await _storage.write(
         key: _shownNotificationIdsKey, value: capped.join(','));
+  }
+
+  Future<void> savePushNotificationsReady(bool ready) => _storage.write(
+        key: _pushNotificationsReadyKey,
+        value: ready ? '1' : '0',
+      );
+
+  Future<bool> readPushNotificationsReady() async {
+    final value = await _storage.read(key: _pushNotificationsReadyKey);
+    return value == '1';
   }
 
   Future<bool> readPassengerTutorialSeen() async {

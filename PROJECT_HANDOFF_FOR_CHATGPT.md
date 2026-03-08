@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, superadmin broadcast notifications added)
+Last updated: 2026-03-08 (Asia/Tashkent, push/poller duplicate notifications fixed)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `fb7f9dc`
+Main branch head (local before this handoff update): `27bd738`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -41,6 +41,10 @@ Main branch head (local before this handoff update): `fb7f9dc`
   - xabar app ichidagi `user_notifications`ga yoziladi
   - `fcm_token` mavjud userlarga push yuboriladi
   - har yuborish `admin_audit_logs`ga `broadcast_notifications_sent` action bilan yoziladi
+- Mobile notification duplicate muammosi tuzatildi:
+  - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
+  - push notification ko'rsatish FCM zimmasida qoldi
+  - poller fallback sifatida faqat push tayyor bo'lmagan qurilmalarda local notification ko'rsatadi
 - Telegram support oqimi kengaytirildi:
   - Media evidence: bot `photo/video/voice/audio/document`ni qabul qiladi
   - Support chat media forward: user yuborgan media support kanaliga forward qilinadi
