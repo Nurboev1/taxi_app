@@ -1,8 +1,8 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, support ticket status ownership fix)
+Last updated: 2026-03-08 (Asia/Tashkent, support status+media ui simplification)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `696aa15`
+Main branch head (local before this handoff update): `500c64f`
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -44,8 +44,7 @@ Main branch head (local before this handoff update): `696aa15`
 - Admin `Support ticketlar` tabi kengaytirildi:
   - saved replies dropdown (`reply template`) qo'shildi
   - ticket table/modalda context (`trip/request/claim`) ko'rinadi
-  - chat bubblelarda media metadata (`message_kind`, caption, size, telegram_message_id) ko'rinadi
-  - media message uchun `Telegramda ochish` tugmasi qo'shildi (support group message deep-link)
+  - media uchun panelda faqat "Photo/Video/..." yuborilgani haqidagi matn ko'rinadi
   - ticket statusi UIda qo'lda o'zgartirilmaydi (faqat user `/close` yoki 24h auto-close)
 - Yangi migration:
   - `backend/alembic/versions/0016_admin_audit_log_metadata.py`
@@ -409,7 +408,6 @@ Endpointlar:
 - `/admin` dashboard
 - `/admin/driver-access` (block/unblock)
 - `/admin/change-password` (POST)
-- `/admin/support-tickets/status` (POST, manual change disabled; compatibility endpoint)
 - `/admin/support-tickets/reply` (POST)
 
 Qila oladi:
@@ -426,8 +424,8 @@ Qila oladi:
 - Saved reply template tanlab tez javob yuborish (`support`/`superadmin`)
 - Ticket statusini qo'lda o'zgartirish admin panelda o'chirilgan
 - Support SLA metrikalarini ko'rish (`waiting_support`, `escalated`, `breached`, auto-close countdown)
-- Ticket context (`trip/request/claim`) va media metadata ko'rish
-- Media xabardan Telegram support groupdagi original postga o'tish (`Telegramda ochish` deep-link)
+- Ticket context (`trip/request/claim`) ko'rish
+- Media yuborilganini matn ko'rinishida ko'rish (photo/video/voice...)
 - Audit logni filterlash va CSV export qilish (`admin_accounts` tabi)
 - Overview intelligence panel:
   - time window KPI (`24h/7d/30d/90d`)

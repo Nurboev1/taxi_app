@@ -297,15 +297,6 @@ def _parse_search_query(raw_query: str | None, fallback_kind: str) -> tuple[str,
     return query, fallback_kind
 
 
-def _telegram_chat_slug(chat_id: str | None) -> str | None:
-    raw = (chat_id or "").strip()
-    if raw.startswith("-100"):
-        candidate = raw[4:]
-        if candidate.isdigit():
-            return candidate
-    return None
-
-
 def _write_admin_audit_log(
     request: Request,
     db: Session,
@@ -624,7 +615,6 @@ def admin_dashboard(request: Request):
         audit_limit = max(20, min(audit_limit, 1000))
         support_tickets_status = request.query_params.get("support_tickets_status")
         support_ticket_open = request.query_params.get("support_ticket_open", "").strip()
-        support_media_chat_slug = _telegram_chat_slug(settings.telegram_support_chat_id)
         support_ticket_filter = (request.query_params.get("support_ticket_filter", "open") or "open").strip().lower()
         if support_ticket_filter not in {"all", "open", "in_progress", "closed"}:
             support_ticket_filter = "open"
@@ -1677,7 +1667,6 @@ def admin_dashboard(request: Request):
             "support_ticket_sla": support_ticket_sla,
             "support_sla_summary": support_sla_summary,
             "support_saved_replies": SUPPORT_SAVED_REPLIES,
-            "support_media_chat_slug": support_media_chat_slug,
             "support_tickets_error": support_tickets_error,
             "resource_metrics": resource_metrics,
             "server_errors": server_errors,
@@ -1762,35 +1751,6 @@ def admin_driver_access(
 
     return RedirectResponse(
         url=f"/admin?tab=driver_access&driver_access_user_id={user_id}&driver_access_status={status}",
-        status_code=302,
-    )
-
-
-@router.post("/support-tickets/status")
-def admin_support_ticket_status(
-    request: Request,
-    ticket_id: int = Form(...),
-    new_status: str = Form(...),
-    support_ticket_filter: str = Form(default="open"),
-):
-    admin_session = _get_admin_session(request)
-    if not admin_session:
-        return RedirectResponse(url="/admin/login", status_code=302)
-    if admin_session["role"] not in {ADMIN_ROLE_SUPERADMIN, ADMIN_ROLE_SUPPORT}:
-        return RedirectResponse(
-            url="/admin?tab=overview",
-            status_code=302,
-        )
-
-    normalized_filter = (support_ticket_filter or "open").strip().lower()
-    if normalized_filter not in {"all", "open", "in_progress", "closed"}:
-        normalized_filter = "open"
-    _ = new_status
-    return RedirectResponse(
-        url=(
-            f"/admin?tab=support_tickets&support_ticket_filter={normalized_filter}"
-            f"&support_tickets_status=manual_status_disabled&support_ticket_open={ticket_id}"
-        ),
         status_code=302,
     )
 

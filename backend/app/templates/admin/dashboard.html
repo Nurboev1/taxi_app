@@ -1240,8 +1240,6 @@
 
           {% if support_tickets_status == 'replied' %}
             <div class="ok">Javob yuborildi.</div>
-          {% elif support_tickets_status == 'updated' %}
-            <div class="ok">Ticket statusi yangilandi.</div>
           {% elif support_tickets_status == 'empty_reply' %}
             <div class="error">Javob matni bo'sh bo'lmasin.</div>
           {% elif support_tickets_status == 'not_found' %}
@@ -1254,12 +1252,8 @@
             <div class="error">Telegramga yuborishda xato bo'ldi.</div>
           {% elif support_tickets_status == 'db_error' %}
             <div class="error">DB xatoligi. `alembic upgrade head` ishlating.</div>
-          {% elif support_tickets_status == 'invalid_status' %}
-            <div class="error">Status noto'g'ri qiymatda yuborildi.</div>
           {% elif support_tickets_status == 'invalid_reply_template' %}
             <div class="error">Saved reply topilmadi. Qaytadan tanlang.</div>
-          {% elif support_tickets_status == 'manual_status_disabled' %}
-            <div class="notice">Ticket statusini admin o'zgartira olmaydi. Status faqat user `/close` yoki 24h auto-close orqali o'zgaradi.</div>
           {% endif %}
 
           <div class="ticket-sla">
@@ -1378,26 +1372,7 @@
                 <div class="chat-wrap">
                   {% for msg in support_ticket_messages.get(row.id, []) %}
                     <div class="chat-bubble {% if msg.sender_role == 'support' %}chat-support{% elif msg.sender_role == 'system' %}chat-system{% else %}chat-user{% endif %}">
-                      {% if msg.message_kind and msg.message_kind != 'text' %}
-                        <div><strong>[{{ msg.message_kind }}]</strong></div>
-                      {% endif %}
-                      {% if msg.message %}
-                        <div>{{ msg.message }}</div>
-                      {% endif %}
-                      {% if msg.media_caption %}
-                        <div class="meta">Caption: {{ msg.media_caption }}</div>
-                      {% endif %}
-                      {% if msg.media_file_size %}
-                        <div class="meta">Size: {{ msg.media_file_size }} bytes</div>
-                      {% endif %}
-                      {% if msg.telegram_message_id %}
-                        <div class="meta">Telegram msg id: {{ msg.telegram_message_id }}</div>
-                      {% endif %}
-                      {% if support_media_chat_slug and msg.message_kind and msg.message_kind != 'text' and msg.telegram_message_id %}
-                        <div style="margin-top:6px;">
-                          <a class="btn-secondary" href="https://t.me/c/{{ support_media_chat_slug }}/{{ msg.telegram_message_id }}" target="_blank" rel="noopener">Telegramda ochish</a>
-                        </div>
-                      {% endif %}
+                      <div>{{ msg.message }}</div>
                       <span class="chat-meta">{{ msg.sender_role }} | {{ msg.created_at }}</span>
                     </div>
                   {% endfor %}

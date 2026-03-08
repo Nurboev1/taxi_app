@@ -439,7 +439,10 @@ def telegram_webhook(
         media_mime_type = str(media_payload.get("mime_type") or "").strip() or None
         media_file_size = media_payload.get("file_size") if isinstance(media_payload.get("file_size"), int) else None
 
-    preview_text = incoming_text or f"[{incoming_kind} evidence]"
+    if incoming_kind == "text":
+        preview_text = incoming_text or "Xabar yuborildi."
+    else:
+        preview_text = f"{incoming_kind.capitalize()} yuborildi."
     now = datetime.now(timezone.utc)
     ticket = _active_ticket_for_user(db, user.id)
     is_new = ticket is None
