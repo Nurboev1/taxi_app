@@ -38,6 +38,7 @@
         radial-gradient(circle at right 12% top 14%, rgba(39, 84, 73, 0.16), transparent 24%),
         linear-gradient(180deg, #f7f0e6 0%, #f3ecdf 50%, #efe7da 100%);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     a { color: inherit; text-decoration: none; }
@@ -127,6 +128,7 @@
       border-radius: 999px;
       color: var(--muted);
       font-size: 14px;
+      text-align: center;
     }
 
     .nav a:hover {
@@ -363,6 +365,10 @@
       margin-bottom: 20px;
     }
 
+    .section-head > * {
+      min-width: 0;
+    }
+
     .section-head p {
       margin: 10px 0 0;
       color: var(--muted);
@@ -520,6 +526,10 @@
         grid-template-columns: 1fr;
       }
 
+      .art-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
       .footer-grid > :first-child {
         grid-column: span 2;
       }
@@ -533,11 +543,21 @@
       .topbar {
         position: static;
         padding-top: 14px;
+        flex-direction: column;
+        align-items: stretch;
       }
 
       .nav {
         width: 100%;
-        justify-content: flex-start;
+        justify-content: stretch;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .nav a,
+      .nav .cta {
+        width: 100%;
       }
 
       .hero-copy,
@@ -547,12 +567,37 @@
         padding: 22px;
       }
 
+      .hero-copy::after {
+        width: 120px;
+        height: 120px;
+        right: 12px;
+        bottom: 12px;
+      }
+
       .hero-metrics,
+      .art-grid,
       .grid-4,
       .grid-3,
       .grid-2,
       .footer-grid {
         grid-template-columns: 1fr;
+      }
+
+      .art-card.primary {
+        grid-column: auto;
+      }
+
+      .hero-actions,
+      .section-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hero-actions .cta,
+      .hero-actions .cta-outline,
+      .section-head .cta,
+      .section-head .cta-outline {
+        width: 100%;
       }
 
       .footer-grid > :first-child {
@@ -561,6 +606,44 @@
 
       h1 {
         font-size: 42px;
+        max-width: none;
+      }
+
+      h2 {
+        font-size: 34px;
+      }
+
+      .feature h3,
+      .faq h3,
+      .step h3,
+      .driver-offer h3,
+      .support-box h3,
+      .art-title {
+        font-size: 24px;
+      }
+
+      .lead,
+      .section-head p,
+      .feature p,
+      .faq p,
+      .step p,
+      .driver-offer p,
+      .support-box p {
+        font-size: 16px;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .nav {
+        grid-template-columns: 1fr;
+      }
+
+      .brand {
+        justify-content: center;
+      }
+
+      .metric .v {
+        font-size: 22px;
       }
     }
   </style>

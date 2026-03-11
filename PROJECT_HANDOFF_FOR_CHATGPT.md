@@ -13,6 +13,7 @@ Main branch head (local before this handoff update): `a070ca3`
   - landing ichida hero, trust, FAQ, driver onboarding va legal/support linklar mavjud
   - footer ichidan `Privacy`, `Terms`, `Telegram support`, `Admin` linklari ko'rinadi
   - keyin public copy soddalashtirildi: texnik iboralar olib tashlanib, oddiy va ravon o'zbekcha matn qo'yildi
+  - mobile responsive layout yaxshilandi: topbar, hero cards, CTA, section head va art-grid telefon ekraniga moslashtirildi
 - Mobile notification duplicate muammosi tuzatildi:
   - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
   - push notification ko'rsatish FCM zimmasida qoldi
