@@ -1,35 +1,35 @@
 {% extends "public/base.html" %}
 
-{% block title %}SafarUz | Public Site{% endblock %}
-{% block description %}SafarUz - yo'lovchi va haydovchilar uchun intercity safar platformasi. Qo'llab-quvvatlash, onboarding va legal ma'lumotlar bitta joyda.{% endblock %}
+{% block title %}SafarUz | Qulay safar xizmati{% endblock %}
+{% block description %}SafarUz - yo'lovchi va haydovchilarni bir-biriga bog'laydigan qulay safar xizmati. Kerakli ma'lumot, yordam va qoidalar bir joyda jamlangan.{% endblock %}
 
 {% block content %}
   <div class="container">
     <section class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">Uzbekistan mobility, cleaner workflow</span>
-        <h1>Yo'lovchi va haydovchini tartibli safarga olib kiradigan platforma.</h1>
+        <span class="eyebrow">Qulay, sodda, ishonchli</span>
+        <h1>Safarni topish ham, yo'lga chiqish ham endi ancha oson.</h1>
         <p class="lead">
-          SafarUz intercity safarlarni topish, claim qilish, chat, rating va support oqimlarini
-          bitta ilova ichida birlashtiradi. Sayt esa foydalanuvchiga tushuntirish, ishonch va onboarding vazifasini bajaradi.
+          SafarUz yo'lovchi va haydovchilarni bir joyda uchrashtiradi.
+          Siz safar qidirishingiz, haydovchi topishingiz, gaplashib olishingiz va kerak bo'lsa yordam so'rashingiz mumkin.
         </p>
         <div class="hero-actions">
           <a class="cta" href="/drivers">Haydovchi bo'lish</a>
-          <a class="cta-outline" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Telegram support</a>
-          <a class="cta-outline" href="#faq">FAQ</a>
+          <a class="cta-outline" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Telegram orqali yozish</a>
+          <a class="cta-outline" href="#faq">Ko'p so'raladigan savollar</a>
         </div>
         <div class="hero-metrics">
           <div class="metric">
-            <div class="v">OTP</div>
-            <div class="k">Telefon orqali tez kirish va password bilan qayta login.</div>
+            <div class="v">Tez kirish</div>
+            <div class="k">Telefon raqami orqali ro'yxatdan o'tish va keyin oson kirish imkoniyati.</div>
           </div>
           <div class="metric">
-            <div class="v">Support</div>
-            <div class="k">Bot orqali threaded support va legal entry pointlar.</div>
+            <div class="v">Yordam</div>
+            <div class="k">Savol yoki muammo bo'lsa, Telegram orqali tez bog'lanish mumkin.</div>
           </div>
           <div class="metric">
-            <div class="v">Rating</div>
-            <div class="k">Safardan keyin baholash va ishonch signalini yig'ish.</div>
+            <div class="v">Ishonch</div>
+            <div class="k">Safardan keyin baho berish orqali yaxshi haydovchi va yo'lovchilar ajralib turadi.</div>
           </div>
         </div>
       </div>
@@ -37,22 +37,22 @@
       <div class="hero-art">
         <div class="art-grid">
           <article class="art-card primary">
-            <div class="art-kicker">Passenger + Driver Flow</div>
-            <div class="art-title">Request, claim, choose, chat, finish.</div>
+            <div class="art-kicker">Yo'lovchi va haydovchi</div>
+            <div class="art-title">Qidirish, kelishish va yo'lga chiqish bir joyda.</div>
             <div class="art-copy">
-              SafarUz ichidagi product logikasi ortiqcha bosqichlarsiz ishlaydi:
-              yo'lovchi request yaratadi, haydovchi claim qiladi, tanlov qilinadi va chat ichida kelishiladi.
+              Ortiqcha ovora bo'lmasdan kerakli yo'nalishni topasiz,
+              haydovchi bilan bog'lanasiz va safar tafsilotlarini kelishib olasiz.
             </div>
           </article>
           <article class="art-card soft">
-            <div class="art-kicker">Support</div>
-            <div class="art-title">Telegramdan tez yordam</div>
-            <div class="art-copy">Alohida support bot, legal sahifalar va ticket tizimi bilan.</div>
+            <div class="art-kicker">Yordam xizmati</div>
+            <div class="art-title">Kerak paytda tez javob</div>
+            <div class="art-copy">Telegram orqali yozasiz, biz esa muammoni tartib bilan ko'rib chiqamiz.</div>
           </article>
           <article class="art-card warm">
-            <div class="art-kicker">Operations</div>
-            <div class="art-title">Admin nazorati</div>
-            <div class="art-copy">Dashboard, audit, search360 va superadmin broadcast oqimi.</div>
+            <div class="art-kicker">Nazorat</div>
+            <div class="art-title">Tartibli boshqaruv</div>
+            <div class="art-copy">Ichki boshqaruv tizimi xizmat sifatini kuzatib borishga yordam beradi.</div>
           </article>
         </div>
       </div>
@@ -62,26 +62,26 @@
       <div class="section-card">
         <div class="section-head">
           <div>
-            <span class="eyebrow">How It Works</span>
-            <h2>Ikki taraf uchun ham aniq va qisqa flow.</h2>
-            <p>Marketing sayt foydalanuvchiga “ilova nima qiladi?” savoliga 15 soniyada javob berishi kerak. Shu blok aynan shunga ishlaydi.</p>
+            <span class="eyebrow">Qanday ishlaydi</span>
+            <h2>Hammasi sodda, tushunarli va bosqichma-bosqich.</h2>
+            <p>SafarUz'dan foydalanish uchun murakkab yo'l yo'q. Bir necha oddiy qadam bilan ish bitadi.</p>
           </div>
         </div>
         <div class="grid-3">
           <article class="step">
             <span class="step-no">01</span>
-            <h3>Yo'lovchi request yaratadi</h3>
-            <p>Yo'nalish, vaqt va o'rin soni kiritiladi. Mos safarlar va claimlar keyin shu request atrofida yig'iladi.</p>
+            <h3>Yo'lovchi safar izlaydi</h3>
+            <p>Qayerdan qayerga borishingizni va qachon yo'lga chiqishingizni kiritasiz.</p>
           </article>
           <article class="step">
             <span class="step-no">02</span>
-            <h3>Haydovchi claim yuboradi</h3>
-            <p>Haydovchi mavjud safardan yo'lovchini ko'radi, claim yuboradi va yo'lovchi eng mos variantni tanlaydi.</p>
+            <h3>Haydovchi bilan bog'laniladi</h3>
+            <p>Mos variant topilgach, yo'lovchi va haydovchi bir-biri bilan tez aloqa qiladi.</p>
           </article>
           <article class="step">
             <span class="step-no">03</span>
-            <h3>Chat, kelishuv, rating</h3>
-            <p>Tomonlar chat orqali aniq kelishadi, safar tugagach esa rating orqali sifat signali qaytariladi.</p>
+            <h3>Kelishuv va safar</h3>
+            <p>Vaqt, joy va boshqa tafsilotlar kelishib olinadi. Safardan keyin esa baho qoldirish mumkin.</p>
           </article>
         </div>
       </div>
@@ -92,36 +92,36 @@
         <div class="section-card">
           <div class="section-head">
             <div>
-              <span class="eyebrow">Trust Layer</span>
-              <h2>Ishonch faqat chiroyli UI bilan emas, oqim bilan quriladi.</h2>
-            </div>
-          </div>
-          <div class="grid-2">
-            <article class="feature">
-              <h3>Telefon + password auth</h3>
-              <p>Avval OTP onboarding, keyin qayta kirish uchun password login. Bu user uchun ham, support uchun ham toza flow beradi.</p>
-            </article>
-            <article class="feature">
-              <h3>Rating va tarix</h3>
-              <p>Har safardan keyin feedback qoldirish mumkin. Bu quality signalni yig'adi va keyingi matchingda ishonchni oshiradi.</p>
-            </article>
-            <article class="feature">
-              <h3>Legal va support</h3>
-              <p>Privacy, terms va bot orqali support kirish nuqtalari ochiq ko'rinadi. Public sayt ishonchni aynan shu yerda yutadi.</p>
-            </article>
-            <article class="feature">
-              <h3>Admin operations</h3>
-              <p>Audit log, support SLA, global search360 va broadcast kabi ichki instrumentlar product sifati uchun tayanch bo'lib turadi.</p>
-            </article>
+            <span class="eyebrow">Ishonch</span>
+            <h2>Qulaylik bilan birga xotirjamlik ham muhim.</h2>
           </div>
         </div>
+        <div class="grid-2">
+          <article class="feature">
+            <h3>Oddiy kirish</h3>
+            <p>Telefon raqami orqali ro'yxatdan o'tasiz va keyin hisobingizga oson kirib turasiz.</p>
+          </article>
+          <article class="feature">
+            <h3>Baho va tajriba</h3>
+            <p>Har safardan keyin fikr qoldirish mumkin. Bu boshqalarga ishonch bilan tanlashga yordam beradi.</p>
+          </article>
+          <article class="feature">
+            <h3>Yordam va qoidalar</h3>
+            <p>Kerakli qoidalar, maxfiylik ma'lumoti va yordam kanali ochiq ko'rinadi.</p>
+          </article>
+          <article class="feature">
+            <h3>Xizmat sifati</h3>
+            <p>Ichki nazorat tizimi orqali murojaatlar va asosiy jarayonlar kuzatib boriladi.</p>
+          </article>
+        </div>
+      </div>
 
         <aside class="quote-card">
           <p>
-            Public site shunchaki “biz haqimizda” sahifa bo'lmasligi kerak.
-            U onboardingni qisqartirishi, ishonchni oshirishi va support yukini kamaytirishi kerak.
+            Bu sayt shunchaki ko'rinish uchun emas.
+            U sizga xizmat nima ekanini tez tushuntirishi va kerakli joyga yo'naltirishi kerak.
           </p>
-          <strong>Pragmatic Product Principle</strong>
+          <strong>SafarUz yondashuvi</strong>
         </aside>
       </div>
     </section>
@@ -130,27 +130,27 @@
       <div class="section-card">
         <div class="section-head">
           <div>
-            <span class="eyebrow">Two Audiences</span>
-            <h2>Yo'lovchi uchun alohida, haydovchi uchun alohida value proposition.</h2>
+            <span class="eyebrow">Kimlar uchun</span>
+            <h2>SafarUz ham yo'lovchi, ham haydovchi uchun qulay.</h2>
           </div>
         </div>
         <div class="grid-2">
           <article class="driver-offer">
             <h3>Yo'lovchi uchun</h3>
-            <p>Safarni topish, haydovchini tanlash va supportga chiqish bir joyda. Chalkash Telegram group tarzidan ancha tartibliroq tajriba.</p>
+            <p>Safarni izlash, haydovchi bilan bog'lanish va kerak bo'lsa yordam so'rash bir joyda jamlangan.</p>
             <ul class="inline-list">
-              <li>Request yaratish va holatini kuzatish</li>
-              <li>Haydovchi claimlarini solishtirish</li>
-              <li>Chat va notification orqali tez aloqa</li>
+              <li>Safar qidirish va tanlash</li>
+              <li>Haydovchi bilan tez bog'lanish</li>
+              <li>Yordam xizmatiga oson chiqish</li>
             </ul>
           </article>
           <article class="driver-offer">
             <h3>Haydovchi uchun</h3>
-            <p>Bo'sh o'rinlarni boshqarish, requestlarga claim yuborish va passenger bilan tez kelishuv qilish uchun operatsion jihatdan yengilroq panel.</p>
+            <p>Bo'sh o'rinlarni to'ldirish, yo'lovchilar bilan kelishish va safarni tartib bilan boshqarish osonlashadi.</p>
             <ul class="inline-list">
-              <li>Trip va seat nazorati</li>
-              <li>Mos requestlarni ko'rish</li>
-              <li>Rating va support orqali ishonchni ushlash</li>
+              <li>Safarni e'lon qilish</li>
+              <li>Mos yo'lovchilarni ko'rish</li>
+              <li>Baho va yordam orqali ishonchni oshirish</li>
             </ul>
           </article>
         </div>
@@ -161,14 +161,14 @@
       <div class="section-card">
         <div class="section-head">
           <div>
-            <span class="eyebrow">FAQ</span>
-            <h2>Foydalanuvchi saytdan chiqib ketmasligi uchun oldindan javob beriladigan savollar.</h2>
+            <span class="eyebrow">Savol-javob</span>
+            <h2>Ko'p so'raladigan savollarga qisqa javoblar.</h2>
           </div>
         </div>
         <div class="grid-2">
           <article class="faq">
             <h3>SafarUz hozir nima?</h3>
-            <p>Bu yo'lovchi va haydovchi o'rtasidagi intercity safar oqimini raqamlashtiradigan mobil product ekotizimi.</p>
+            <p>Bu yo'lovchi va haydovchilarni bir-biriga bog'laydigan qulay safar ilovasi.</p>
           </article>
           <article class="faq">
             <h3>Supportga qayerdan yozaman?</h3>
@@ -176,11 +176,11 @@
           </article>
           <article class="faq">
             <h3>Haydovchi bo'lish mumkinmi?</h3>
-            <p>Ha. Alohida onboarding va verification oqimi uchun driver sahifasi tayyorlangan.</p>
+            <p>Ha. Buning uchun haydovchilar uchun alohida sahifa tayyorlangan.</p>
           </article>
           <article class="faq">
             <h3>Legal hujjatlar bormi?</h3>
-            <p>Ha. <a href="/legal/privacy">Privacy Policy</a> va <a href="/legal/terms">Terms of Use</a> public ko'rinishda mavjud.</p>
+            <p>Ha. <a href="/legal/privacy">Maxfiylik siyosati</a> va <a href="/legal/terms">Foydalanish shartlari</a> ochiq joylashtirilgan.</p>
           </article>
         </div>
       </div>
@@ -190,11 +190,11 @@
       <div class="section-card">
         <div class="section-head">
           <div>
-            <span class="eyebrow">Next Step</span>
-            <h2>Public sayt tayyor. Endi unga haqiqiy distribution CTA ulash mumkin.</h2>
-            <p>Agar keyin Play Store yoki APK link bo'lsa, shu hero CTA’ga real install button osongina ulanadi.</p>
+            <span class="eyebrow">Keyingi qadam</span>
+            <h2>Haydovchilar uchun alohida sahifa bilan tanishing.</h2>
+            <p>Agar siz haydovchi bo'lsangiz yoki shu yo'nalishda ishlamoqchi bo'lsangiz, keyingi sahifada batafsilroq ma'lumot bor.</p>
           </div>
-          <a class="cta" href="/drivers">Driver onboarding page</a>
+          <a class="cta" href="/drivers">Haydovchilar sahifasi</a>
         </div>
       </div>
     </section>

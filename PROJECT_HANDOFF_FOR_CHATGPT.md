@@ -12,6 +12,7 @@ Main branch head (local before this handoff update): `a070ca3`
   - yangi template'lar: `backend/app/templates/public/base.html`, `home.html`, `drivers.html`
   - landing ichida hero, trust, FAQ, driver onboarding va legal/support linklar mavjud
   - footer ichidan `Privacy`, `Terms`, `Telegram support`, `Admin` linklari ko'rinadi
+  - keyin public copy soddalashtirildi: texnik iboralar olib tashlanib, oddiy va ravon o'zbekcha matn qo'yildi
 - Mobile notification duplicate muammosi tuzatildi:
   - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
   - push notification ko'rsatish FCM zimmasida qoldi
