@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release artifacts: only APK inside this folder should be tracked.
+release_assets/*
+!release_assets/*.apk

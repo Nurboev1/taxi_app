@@ -1,19 +1,21 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-11 (Asia/Tashkent, public marketing site added)
+Last updated: 2026-03-11 (Asia/Tashkent, APK download page and tracked release APK added)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `a070ca3`
+Main branch head (local before this handoff update): `817bee0`
 
 ## 0) So'nggi yangilanish (2026-03-11)
 
 - Public marketing site qo'shildi:
   - yangi router: `backend/app/api/public.py`
-  - public route'lar: `/` va `/drivers`
-  - yangi template'lar: `backend/app/templates/public/base.html`, `home.html`, `drivers.html`
+  - public route'lar: `/`, `/drivers`, `/download`, `/download/apk`
+  - yangi template'lar: `backend/app/templates/public/base.html`, `home.html`, `drivers.html`, `download.html`
   - landing ichida hero, trust, FAQ, driver onboarding va legal/support linklar mavjud
   - footer ichidan `Privacy`, `Terms`, `Telegram support`, `Admin` linklari ko'rinadi
   - keyin public copy soddalashtirildi: texnik iboralar olib tashlanib, oddiy va ravon o'zbekcha matn qo'yildi
   - mobile responsive layout yaxshilandi: topbar, hero cards, CTA, section head va art-grid telefon ekraniga moslashtirildi
+  - APK yuklash sahifasi qo'shildi va release APK `release_assets/SafarUz-Android-v1.1.0.apk` sifatida repoga track qilinadi
+  - `.gitignore` faqat `release_assets/*.apk` ni qabul qiladigan qilib toraytirildi
 - Mobile notification duplicate muammosi tuzatildi:
   - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
   - push notification ko'rsatish FCM zimmasida qoldi
@@ -188,6 +190,7 @@ Root ichida asosiy papkalar:
 
 Eslatma: rootda eski Flutter shell (`android/`, `ios/`, `lib/`) ham bor. Real aktiv mobil kod `mobile/` ichida.
 Public marketing template'lar `backend/app/templates/public/` ichida turadi.
+Track qilinadigan Android release APK `release_assets/` ichida turadi.
 
 ---
 
@@ -426,12 +429,15 @@ Fayllar:
 URL:
 - `/`
 - `/drivers`
+- `/download`
+- `/download/apk`
 
 Maqsad:
 - app uchun public-facing landing bo'lishi
 - haydovchi onboarding oqimini aniq ko'rsatishi
 - legal va support entry pointlarni tashqaridan ham ko'rinadigan qilish
 - keyinchalik Play Store, APK yoki referral CTA ulash uchun tayyor asos berishi
+- hozir Android release APK ni to'g'ridan-to'g'ri saytdan yuklab olish imkonini berishi
 
 ### 4.14 Admin panel
 Fayl: `backend/app/api/admin.py`

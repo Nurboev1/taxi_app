@@ -14,6 +14,9 @@
           Siz safar qidirishingiz, haydovchi topishingiz, gaplashib olishingiz va kerak bo'lsa yordam so'rashingiz mumkin.
         </p>
         <div class="hero-actions">
+          {% if apk_available %}
+            <a class="cta" href="/download">APK yuklab olish</a>
+          {% endif %}
           <a class="cta" href="/drivers">Haydovchi bo'lish</a>
           <a class="cta-outline" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Telegram orqali yozish</a>
           <a class="cta-outline" href="#faq">Ko'p so'raladigan savollar</a>
@@ -123,6 +126,21 @@
           </p>
           <strong>SafarUz yondashuvi</strong>
         </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Ilovani yuklab olish</span>
+            <h2>Android telefon uchun tayyor APK mavjud.</h2>
+            <p>Ilovani sinab ko'rmoqchi bo'lsangiz, alohida yuklash sahifasidan release APK ni to'g'ridan-to'g'ri olishingiz mumkin.</p>
+          </div>
+          {% if apk_available %}
+            <a class="cta" href="/download">APK yuklab olish</a>
+          {% endif %}
+        </div>
       </div>
     </section>
 

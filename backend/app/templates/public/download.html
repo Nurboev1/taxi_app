@@ -1,0 +1,97 @@
+{% extends "public/base.html" %}
+
+{% block title %}APK yuklab olish | SafarUz{% endblock %}
+{% block description %}SafarUz Android ilovasini to'g'ridan-to'g'ri sayt orqali yuklab oling.{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Android yuklab olish</span>
+        <h1>SafarUz ilovasini telefonga to'g'ridan-to'g'ri yuklab oling.</h1>
+        <p class="lead">
+          Agar sizga Android APK kerak bo'lsa, shu sahifadan bir bosishda yuklab olishingiz mumkin.
+          Fayl tayyor release holatida joylangan.
+        </p>
+        <div class="hero-actions">
+          {% if apk_available %}
+            <a class="cta" href="{{ apk_download_url }}">APK yuklab olish</a>
+          {% else %}
+            <span class="cta-outline">APK hozircha mavjud emas</span>
+          {% endif %}
+          <a class="cta-outline" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Yordam kerak bo'lsa yozish</a>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric">
+            <div class="v">Android</div>
+            <div class="k">Hozircha sayt orqali Android APK yuklab olinadi.</div>
+          </div>
+          <div class="metric">
+            <div class="v">{{ apk_size_mb or '-' }} MB</div>
+            <div class="k">Fayl hajmi.</div>
+          </div>
+          <div class="metric">
+            <div class="v">v1.1.0</div>
+            <div class="k">Joriy release APK nomi: {{ apk_name }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <div class="art-grid">
+          <article class="art-card primary">
+            <div class="art-kicker">Yuklash</div>
+            <div class="art-title">Bir bosishda APK</div>
+            <div class="art-copy">
+              Fayl brauzer orqali yuklanadi va telefoningizga o'rnatish uchun tayyor bo'ladi.
+            </div>
+          </article>
+          <article class="art-card soft">
+            <div class="art-kicker">Fayl holati</div>
+            <div class="art-title">{% if apk_available %}Tayyor{% else %}Topilmadi{% endif %}</div>
+            <div class="art-copy">
+              {% if apk_available %}
+                Oxirgi yangilanish vaqti: {{ apk_updated_at }}
+              {% else %}
+                Release APK hozircha serverga qo'yilmagan.
+              {% endif %}
+            </div>
+          </article>
+          <article class="art-card warm">
+            <div class="art-kicker">Nomi</div>
+            <div class="art-title">{{ apk_name }}</div>
+            <div class="art-copy">Yuklanganda foydalanuvchiga shu nom bilan beriladi.</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Qisqa yo'riqnoma</span>
+            <h2>Yuklab olgandan keyin nima qilish kerak?</h2>
+          </div>
+        </div>
+        <div class="grid-3">
+          <article class="step">
+            <span class="step-no">01</span>
+            <h3>APK ni yuklab oling</h3>
+            <p>`APK yuklab olish` tugmasini bosing va fayl telefoningizga tushishini kuting.</p>
+          </article>
+          <article class="step">
+            <span class="step-no">02</span>
+            <h3>O'rnatishga ruxsat bering</h3>
+            <p>Agar telefon so'rasa, brauzer yoki fayl menejerga noma'lum manbadan o'rnatish ruxsatini bering.</p>
+          </article>
+          <article class="step">
+            <span class="step-no">03</span>
+            <h3>Ilovani oching</h3>
+            <p>O'rnatilgach ilovani ochib, telefon raqamingiz bilan ro'yxatdan o'ting yoki hisobingizga kiring.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
