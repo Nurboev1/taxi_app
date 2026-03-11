@@ -1,8 +1,21 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-08 (Asia/Tashkent, push/poller duplicate notifications fixed)
+Last updated: 2026-03-11 (Asia/Tashkent, public marketing site added)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `27bd738`
+Main branch head (local before this handoff update): `a070ca3`
+
+## 0) So'nggi yangilanish (2026-03-11)
+
+- Public marketing site qo'shildi:
+  - yangi router: `backend/app/api/public.py`
+  - public route'lar: `/` va `/drivers`
+  - yangi template'lar: `backend/app/templates/public/base.html`, `home.html`, `drivers.html`
+  - landing ichida hero, trust, FAQ, driver onboarding va legal/support linklar mavjud
+  - footer ichidan `Privacy`, `Terms`, `Telegram support`, `Admin` linklari ko'rinadi
+- Mobile notification duplicate muammosi tuzatildi:
+  - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
+  - push notification ko'rsatish FCM zimmasida qoldi
+  - poller fallback sifatida faqat push tayyor bo'lmagan qurilmalarda local notification ko'rsatadi
 
 ## 0) So'nggi yangilanish (2026-03-08)
 
@@ -41,10 +54,6 @@ Main branch head (local before this handoff update): `27bd738`
   - xabar app ichidagi `user_notifications`ga yoziladi
   - `fcm_token` mavjud userlarga push yuboriladi
   - har yuborish `admin_audit_logs`ga `broadcast_notifications_sent` action bilan yoziladi
-- Mobile notification duplicate muammosi tuzatildi:
-  - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
-  - push notification ko'rsatish FCM zimmasida qoldi
-  - poller fallback sifatida faqat push tayyor bo'lmagan qurilmalarda local notification ko'rsatadi
 - Telegram support oqimi kengaytirildi:
   - Media evidence: bot `photo/video/voice/audio/document`ni qabul qiladi
   - Support chat media forward: user yuborgan media support kanaliga forward qilinadi
@@ -176,6 +185,7 @@ Root ichida asosiy papkalar:
 - `infra/` - docker-compose (Postgres)
 
 Eslatma: rootda eski Flutter shell (`android/`, `ios/`, `lib/`) ham bor. Real aktiv mobil kod `mobile/` ichida.
+Public marketing template'lar `backend/app/templates/public/` ichida turadi.
 
 ---
 
@@ -185,6 +195,7 @@ Eslatma: rootda eski Flutter shell (`android/`, `ios/`, `lib/`) ham bor. Real ak
 Fayl: `backend/app/main.py`
 
 Routers:
+- `public`
 - `auth`
 - `admin`
 - `role`
@@ -403,7 +414,24 @@ URL:
 - `/legal/privacy`
 - `/legal/terms`
 
-### 4.13 Admin panel
+### 4.13 Public marketing site
+Fayllar:
+- `backend/app/api/public.py`
+- `backend/app/templates/public/base.html`
+- `backend/app/templates/public/home.html`
+- `backend/app/templates/public/drivers.html`
+
+URL:
+- `/`
+- `/drivers`
+
+Maqsad:
+- app uchun public-facing landing bo'lishi
+- haydovchi onboarding oqimini aniq ko'rsatishi
+- legal va support entry pointlarni tashqaridan ham ko'rinadigan qilish
+- keyinchalik Play Store, APK yoki referral CTA ulash uchun tayyor asos berishi
+
+### 4.14 Admin panel
 Fayl: `backend/app/api/admin.py`
 Template: `backend/app/templates/admin/dashboard.html`
 

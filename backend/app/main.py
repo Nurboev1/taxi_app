@@ -11,6 +11,7 @@ from app.api.chat import router as chat_router
 from app.api.driver import router as driver_router
 from app.api.legal import router as legal_router
 from app.api.notifications import router as notifications_router
+from app.api.public import router as public_router
 from app.api.requests import router as request_router
 from app.api.rating import router as rating_router
 from app.api.role import router as role_router
@@ -135,3 +136,4 @@ app.include_router(rating_router)
 app.include_router(notifications_router)
 app.include_router(legal_router)
 app.include_router(support_router)
+app.include_router(public_router)

@@ -1,0 +1,136 @@
+{% extends "public/base.html" %}
+
+{% block title %}Haydovchilar uchun | SafarUz{% endblock %}
+{% block description %}SafarUz haydovchilar uchun intercity triplarni boshqarish, requestlarga claim yuborish va passenger bilan tez kelishish imkonini beradi.{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Driver Recruitment</span>
+        <h1>Bo'sh o'rinlarni daromadga aylantiradigan tartibli driver flow.</h1>
+        <p class="lead">
+          SafarUz haydovchilar uchun oddiy e'lon taxtasi emas. U safar yaratish, request ko'rish,
+          claim yuborish, passenger bilan chat qilish va supportga chiqish jarayonini birlashtiradi.
+        </p>
+        <div class="hero-actions">
+          <a class="cta" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Bog'lanish</a>
+          <a class="cta-outline" href="/legal/terms">Terms bilan tanishish</a>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric">
+            <div class="v">Trips</div>
+            <div class="k">Safarlarni o'zingiz yaratib, vaqti va o'rinini boshqarasiz.</div>
+          </div>
+          <div class="metric">
+            <div class="v">Claims</div>
+            <div class="k">Mos passenger requestlariga claim yuborasiz.</div>
+          </div>
+          <div class="metric">
+            <div class="v">Support</div>
+            <div class="k">Muammo bo'lsa bot orqali tez chiqish mavjud.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <div class="art-grid">
+          <article class="art-card primary">
+            <div class="art-kicker">Driver Value</div>
+            <div class="art-title">Trip control sizda, passenger tanlovi ham sizga yaqinroq.</div>
+            <div class="art-copy">
+              Oqim claim va chat markazida qurilgan. Bu haydovchiga safarni to'ldirish va passenger bilan aniq kelishuv qilishda yordam beradi.
+            </div>
+          </article>
+          <article class="art-card soft">
+            <div class="art-kicker">Verification</div>
+            <div class="art-title">Ishonchli onboarding</div>
+            <div class="art-copy">Driver access va support verification product ichida boshqariladi.</div>
+          </article>
+          <article class="art-card warm">
+            <div class="art-kicker">Quality</div>
+            <div class="art-title">Rating signal</div>
+            <div class="art-copy">Yaxshi service ko'rsatgan haydovchi rating orqali ajralib turadi.</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Why Drivers Use It</span>
+            <h2>Telegram chatlar orasida yo'qolib ketmaydigan operatsion tartib.</h2>
+          </div>
+        </div>
+        <div class="grid-3">
+          <article class="feature">
+            <h3>Trip yaratish</h3>
+            <p>Yo'nalish, vaqt, o'rin va narxni kiritib safarni ochasiz. Status va seat holati ko'rinib turadi.</p>
+          </article>
+          <article class="feature">
+            <h3>Requestlarni ko'rish</h3>
+            <p>Passenger requestlari alohida oqimda chiqadi. Qo'lda qidirish o'rniga product sizga mos kontekstni beradi.</p>
+          </article>
+          <article class="feature">
+            <h3>Claim va chat</h3>
+            <p>Passenger tanlaganidan keyin chatga o'tasiz va kelishuvni tez yakunlaysiz.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid-2">
+        <div class="section-card">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Requirements</span>
+              <h2>Driver onboarding uchun kutiladigan asosiy narsalar.</h2>
+            </div>
+          </div>
+          <div class="grid-2">
+            <article class="support-box">
+              <h3>To'g'ri profil</h3>
+              <p>Telefon, ism va asosiy profil ma'lumotlari aniq bo'lishi kerak.</p>
+            </article>
+            <article class="support-box">
+              <h3>Avtomobil ma'lumoti</h3>
+              <p>Mashina modeli va raqam kabi fieldlar keyingi verification uchun muhim.</p>
+            </article>
+            <article class="support-box">
+              <h3>Qoida va tartib</h3>
+              <p>Passenger bilan halol muloqot, aniq vaqt va to'g'ri yo'nalish product sifati uchun kritik.</p>
+            </article>
+            <article class="support-box">
+              <h3>Supportga ochiqlik</h3>
+              <p>Muammo yoki blok holatida support bot orqali tez bog'lanish kerak bo'ladi.</p>
+            </article>
+          </div>
+        </div>
+
+        <aside class="quote-card">
+          <p>
+            Yaxshi driver experience faqat “trip qo'shish” emas.
+            Unga matching, support, trust va ratingni bir-biriga to'g'ri bog'lash kerak.
+          </p>
+          <strong>Driver Product View</strong>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Start Here</span>
+            <h2>Driver onboardingni support orqali boshlang.</h2>
+            <p>Hozircha eng to'g'ri kirish nuqtasi support va verification oqimi. Keyin bu joyga alohida signup form ham ulash mumkin.</p>
+          </div>
+          <a class="cta" href="{{ support_bot_link }}" target="_blank" rel="noopener noreferrer">Telegram orqali bog'lanish</a>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
