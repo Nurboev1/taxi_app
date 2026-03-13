@@ -5,6 +5,7 @@ import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/widgets/neo_shell.dart';
+import 'package:taxi_mobile/features/driver/driver_subscription_sheet.dart';
 
 import '../auth/auth_controller.dart';
 
@@ -55,6 +56,33 @@ class RolePage extends ConsumerWidget {
                       if (!context.mounted) return;
                       if (apiErrorCode(e) == 'DRIVER_BLOCKED') {
                         context.go('/driver-blocked');
+                        return;
+                      }
+                      if (apiErrorCode(e) == 'DRIVER_SUBSCRIPTION_REQUIRED') {
+                        final activated = await showDriverSubscriptionSheet(
+                          context,
+                          ref,
+                          title: "Haydovchi obunasi",
+                          message:
+                              "Haydovchi rejimiga o'tish uchun avval oylik obunani faollashtiring.",
+                        );
+                        if (!activated || !context.mounted) return;
+                        try {
+                          await ref
+                              .read(authControllerProvider.notifier)
+                              .setRole('driver');
+                          if (context.mounted) context.go('/profile-setup');
+                        } catch (retryError) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(apiErrorMessage(
+                                retryError,
+                                fallback: s.t('generic_error'),
+                              )),
+                            ),
+                          );
+                        }
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(

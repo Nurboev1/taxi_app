@@ -10,6 +10,11 @@ class Endpoints {
   static const loginPassword = '/auth/login-password';
   static const verifyOtp = '/auth/verify-otp';
   static const setRole = '/role/set';
+  static const driverMonetization = '/role/driver-monetization';
+  static const driverMonetizationCheckout =
+      '/role/driver-monetization/checkout';
+  static String driverMonetizationPayment(int id) =>
+      '/role/driver-monetization/payments/$id';
   static const myProfile = '/auth/profile/me';
 
   static const createTrip = '/driver/trips';

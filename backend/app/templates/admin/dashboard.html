@@ -662,6 +662,7 @@
       {% if 'errors' in tab_access %}<a class="tab {% if tab == 'errors' %}active{% endif %}" href="/admin?tab=errors">Server xatoliklari</a>{% endif %}
       {% if 'support_tickets' in tab_access %}<a class="tab {% if tab == 'support_tickets' %}active{% endif %}" href="/admin?tab=support_tickets">Support ticketlar</a>{% endif %}
       {% if 'broadcasts' in tab_access %}<a class="tab {% if tab == 'broadcasts' %}active{% endif %}" href="/admin?tab=broadcasts">Broadcast</a>{% endif %}
+      {% if 'driver_monetization' in tab_access %}<a class="tab {% if tab == 'driver_monetization' %}active{% endif %}" href="/admin?tab=driver_monetization">Driver monetization</a>{% endif %}
       {% if 'security' in tab_access %}<a class="tab {% if tab == 'security' %}active{% endif %}" href="/admin?tab=security">Admin xavfsizlik</a>{% endif %}
       {% if 'admin_accounts' in tab_access %}<a class="tab {% if tab == 'admin_accounts' %}active{% endif %}" href="/admin?tab=admin_accounts">Admin accountlar</a>{% endif %}
     </nav>
@@ -1476,6 +1477,129 @@
               </div>
             </section>
           </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if tab == 'driver_monetization' %}
+      <section class="card">
+        <h3>Driver monetization</h3>
+        <div class="body">
+          {% if driver_monetization_status == 'settings_saved' %}
+            <div class="ok">Monetization sozlamalari saqlandi.</div>
+          {% elif driver_monetization_status == 'grant_ok' %}
+            <div class="ok">Driver obunasi uzaytirildi.</div>
+          {% elif driver_monetization_status == 'payment_marked_paid' %}
+            <div class="ok">To'lov paid holatiga o'tkazildi va obuna uzaytirildi.</div>
+          {% elif driver_monetization_status == 'invalid_price' %}
+            <div class="error">Narx manfiy bo'lmasin.</div>
+          {% elif driver_monetization_status == 'invalid_months' %}
+            <div class="error">Oy soni 1 dan 12 gacha bo'lsin.</div>
+          {% elif driver_monetization_status == 'user_not_found' %}
+            <div class="error">Driver topilmadi.</div>
+          {% elif driver_monetization_status == 'payment_not_found' %}
+            <div class="error">To'lov topilmadi.</div>
+          {% elif driver_monetization_status == 'db_error' %}
+            <div class="error">DB xatoligi yuz berdi.</div>
+          {% endif %}
+
+          <div class="grid" style="margin-bottom:12px;">
+            <section class="card">
+              <h3>Global sozlamalar</h3>
+              <div class="body">
+                <form method="post" action="/admin/driver-monetization/settings">
+                  <div class="filters">
+                    <label><input type="checkbox" name="driver_paid_mode_enabled" value="1" {% if driver_monetization_settings and driver_monetization_settings.driver_paid_mode_enabled %}checked{% endif %} /> Pullik rejim yoqilgan</label>
+                  </div>
+                  <div class="filters">
+                    <label for="driver_monthly_price">Oylik narx (UZS):</label>
+                    <input id="driver_monthly_price" type="number" name="driver_monthly_price" min="0" value="{{ driver_monetization_settings.driver_monthly_price if driver_monetization_settings else 0 }}" required />
+                  </div>
+                  <div class="filters">
+                    <label><input type="checkbox" name="click_enabled" value="1" {% if driver_monetization_settings and driver_monetization_settings.click_enabled %}checked{% endif %} /> Click yoqilsin</label>
+                    <label><input type="checkbox" name="payme_enabled" value="1" {% if driver_monetization_settings and driver_monetization_settings.payme_enabled %}checked{% endif %} /> Payme yoqilsin</label>
+                  </div>
+                  <div class="meta">Pullik rejim o'chiq bo'lsa mobil ilovada to'lov haqidagi UI ko'rinmaydi. Yoqilganda haydovchilar uchun paywall va subscription logic ishlaydi.</div>
+                  <button type="submit">Saqlash</button>
+                </form>
+              </div>
+            </section>
+
+            <section class="card">
+              <h3>Manual grant</h3>
+              <div class="body">
+                <form method="post" action="/admin/driver-monetization/subscriptions/grant">
+                  <div class="filters">
+                    <label for="grant_user_id">Driver user ID:</label>
+                    <input id="grant_user_id" type="number" name="user_id" min="1" required />
+                  </div>
+                  <div class="filters">
+                    <label for="grant_months">Oy soni:</label>
+                    <input id="grant_months" type="number" name="months_count" min="1" max="12" value="1" required />
+                  </div>
+                  <button type="submit">Obuna qo'shish</button>
+                </form>
+              </div>
+            </section>
+          </div>
+
+          <section class="card" style="margin-bottom:12px;">
+            <h3>Driver obunalari</h3>
+            <div class="body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>User</th><th>Telefon</th><th>Status</th><th>Qolgan kun</th><th>Provider</th><th>Oxirgi to'lov</th><th>Access</th></tr></thead>
+                  <tbody>
+                    {% for row in driver_monetization_rows %}
+                      <tr>
+                        <td>{{ row.user.id }}</td>
+                        <td>{{ row.user.phone }}</td>
+                        <td>{{ row.subscription.status }}</td>
+                        <td>{{ row.remaining_days }}</td>
+                        <td>{{ row.subscription.last_payment_provider or '-' }}</td>
+                        <td>{{ row.subscription.last_payment_at or '-' }}</td>
+                        <td>{{ 'ha' if row.can_access else "yo'q" }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Oxirgi to'lovlar</h3>
+            <div class="body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>ID</th><th>User</th><th>Provider</th><th>Summa</th><th>Oy</th><th>Status</th><th>Vaqt</th><th>Amal</th></tr></thead>
+                  <tbody>
+                    {% for row in driver_monetization_recent_payments %}
+                      <tr>
+                        <td>{{ row.id }}</td>
+                        <td>{{ row.user_id }}</td>
+                        <td>{{ row.provider }}</td>
+                        <td>{{ row.amount }}</td>
+                        <td>{{ row.months_count }}</td>
+                        <td>{{ row.status }}</td>
+                        <td>{{ row.created_at }}</td>
+                        <td>
+                          {% if row.status != 'paid' %}
+                            <form method="post" action="/admin/driver-monetization/payments/mark-paid">
+                              <input type="hidden" name="payment_id" value="{{ row.id }}" />
+                              <button type="submit">Paid qilish</button>
+                            </form>
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
     {% endif %}

@@ -1,8 +1,48 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-11 (Asia/Tashkent, APK download page and tracked release APK added)
+Last updated: 2026-03-13 (Asia/Samarkand, hidden driver paid mode scaffold added)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `817bee0`
+Main branch head (local before this handoff update): `30058b8`
+
+## 0) So'nggi yangilanish (2026-03-13)
+
+- Driver monetization / paid mode uchun yashirin infrastrukturasi qo'shildi:
+  - yangi migration: `backend/alembic/versions/0017_driver_paid_mode.py`
+  - yangi jadvallar: `monetization_settings`, `driver_subscriptions`, `driver_payments`
+  - yangi modelllar: `MonetizationSetting`, `DriverSubscription`, `DriverPayment`
+  - yangi service: `backend/app/services/driver_monetization.py`
+- Superadmin uchun admin panelda yangi `Driver monetization` tabi qo'shildi:
+  - global toggle: `driver_paid_mode_enabled`
+  - oylik narx (`driver_monthly_price`)
+  - Click/Payme yoqish-o'chirish
+  - driver subscription holatlari jadvali
+  - recent paymentlar jadvali
+  - manual grant va pending paymentni `paid` qilish imkoniyati
+- Muhim biznes logika:
+  - paid mode `off` bo'lsa ilovada to'lov UI ko'rinmaydi
+  - paid mode `on` bo'lsa haydovchiga o'tishda subscription/paywall tekshiruvi ishlaydi
+  - countdown `off` paytda muzlaydi, `on` qilinganda qolgan vaqtdan davom etadi
+  - driver endpointlarida backend darajasida `402 DRIVER_SUBSCRIPTION_REQUIRED` himoyasi bor
+- Mobile driver monetization oqimi qo'shildi:
+  - role tanlashda `driver` bosilganda kerak bo'lsa subscription bottom sheet chiqadi
+  - `Settings` ichida passenger -> driver almashishda ham shu paywall chiqadi
+  - `DriverHomePage` paid mode yoqilgan va subscription yo'q bo'lsa lock view ko'rsatadi
+  - driver profile tabida monetization yoqilgan paytda `Haydovchi obunasi` tile chiqadi
+  - sheet ichida oy sonini tanlash (`1/3/6/12 oy`) va Click/Payme checkout tugmalari bor
+- Yangi env sozlamalar:
+  - `PAYMENT_RETURN_URL`
+  - `CLICK_SERVICE_ID`
+  - `CLICK_MERCHANT_ID`
+  - `CLICK_SECRET_KEY`
+  - `CLICK_CHECKOUT_URL_TEMPLATE`
+  - `PAYME_MERCHANT_ID`
+  - `PAYME_SECRET_KEY`
+  - `PAYME_CHECKOUT_BASE_URL`
+  - `PAYME_ACCOUNT_FIELD`
+- Hozirgi cheklov:
+  - Click/Payme checkout URL generation tayyor, lekin merchant callback/webhook bilan avtomatik `paid` tasdiqlash hali qilinmagan
+  - productionda vaqtincha admin paneldagi `mark paid` orqali subscription faollashtiriladi
+  - keyingi bosqich: Click/Payme webhook verify + payment status auto-activation
 
 ## 0) So'nggi yangilanish (2026-03-11)
 
@@ -881,9 +921,13 @@ Backend:
 - `backend/app/api/rating.py`
 - `backend/app/api/notifications.py`
 - `backend/app/api/admin.py`
+- `backend/app/services/driver_monetization.py`
 - `backend/app/services/devsms_sms.py`
 - `backend/app/services/push.py`
 - `backend/app/services/notifications.py`
+- `backend/app/models/monetization_setting.py`
+- `backend/app/models/driver_subscription.py`
+- `backend/app/models/driver_payment.py`
 - `backend/app/models/user.py`
 - `backend/app/schemas/auth.py`
 - `backend/alembic/versions/*.py`
@@ -897,6 +941,8 @@ Mobile:
 - `mobile/lib/features/auth/password_login_page.dart`
 - `mobile/lib/features/auth/otp_page.dart`
 - `mobile/lib/features/auth/set_password_page.dart`
+- `mobile/lib/features/driver/driver_monetization_controller.dart`
+- `mobile/lib/features/driver/driver_subscription_sheet.dart`
 - `mobile/lib/core/notifications/notification_poller.dart`
 - `mobile/lib/core/notifications/push_notifications_service.dart`
 - `mobile/lib/core/i18n/strings.dart`

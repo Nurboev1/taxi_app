@@ -24,6 +24,9 @@ from app.models.admin_audit_log import AdminAuditLog
 from app.models.admin_credential import AdminCredential
 from app.models.chat import Chat, ChatMessage
 from app.models.claim import RequestClaim
+from app.models.driver_payment import DriverPayment
+from app.models.driver_subscription import DriverSubscription
+from app.models.monetization_setting import MonetizationSetting
 from app.models.notification import UserNotification
 from app.models.rating import TripRating
 from app.models.request import PassengerRequest
@@ -33,6 +36,13 @@ from app.models.trip import DriverTrip
 from app.models.user import User
 from app.models.enums import ClaimStatus, RequestStatus, TripStatus, UserRole
 from app.services.notifications import create_notification
+from app.services.driver_monetization import (
+    extend_driver_subscription,
+    get_or_create_driver_subscription,
+    get_or_create_monetization_settings,
+    mark_payment_paid,
+    sync_driver_subscription,
+)
 from app.services.support_tickets import (
     SENDER_SUPPORT,
     TICKET_STATUS_CLOSED,
@@ -66,6 +76,7 @@ ADMIN_TAB_ACCESS = {
         "errors",
         "security",
         "admin_accounts",
+        "driver_monetization",
         "broadcasts",
         "support_tickets",
         "search360",
@@ -621,6 +632,7 @@ def admin_dashboard(request: Request):
         admin_password_status = request.query_params.get("admin_password_status")
         admin_accounts_status = request.query_params.get("admin_accounts_status")
         broadcast_status = request.query_params.get("broadcast_status")
+        driver_monetization_status = request.query_params.get("driver_monetization_status")
         audit_actor = (request.query_params.get("audit_actor") or "").strip()
         audit_action = (request.query_params.get("audit_action") or "").strip()
         audit_target = (request.query_params.get("audit_target") or "").strip()
@@ -657,6 +669,9 @@ def admin_dashboard(request: Request):
         admin_accounts_error: str | None = None
         admin_audit_logs: list[AdminAuditLog] = []
         broadcast_recent_logs: list[AdminAuditLog] = []
+        driver_monetization_settings: MonetizationSetting | None = None
+        driver_monetization_rows: list[dict[str, object]] = []
+        driver_monetization_recent_payments: list[DriverPayment] = []
         support_tickets: list[SupportTicket] = []
         support_recent_for_overview: list[SupportTicket] = []
         support_ticket_messages: dict[int, list[SupportTicketMessage]] = {}
@@ -1019,6 +1034,40 @@ def admin_dashboard(request: Request):
             except SQLAlchemyError:
                 db.rollback()
                 broadcast_recent_logs = []
+
+        if _can_access_tab(admin_role, "driver_monetization"):
+            try:
+                driver_monetization_settings = get_or_create_monetization_settings(db)
+                driver_rows = db.scalars(
+                    select(User)
+                    .where(User.role == UserRole.driver)
+                    .order_by(User.created_at.desc())
+                    .limit(160)
+                ).all()
+                for user in driver_rows:
+                    subscription = get_or_create_driver_subscription(db, user.id)
+                    sync_driver_subscription(db, subscription, driver_monetization_settings)
+                    driver_monetization_rows.append(
+                        {
+                            "user": user,
+                            "subscription": subscription,
+                            "remaining_days": subscription.remaining_seconds // 86400,
+                            "can_access": (
+                                (not driver_monetization_settings.driver_paid_mode_enabled)
+                                or subscription.remaining_seconds > 0
+                            ),
+                        }
+                    )
+                driver_monetization_recent_payments = db.scalars(
+                    select(DriverPayment)
+                    .order_by(DriverPayment.created_at.desc())
+                    .limit(40)
+                ).all()
+            except SQLAlchemyError:
+                db.rollback()
+                driver_monetization_rows = []
+                driver_monetization_recent_payments = []
+                driver_monetization_settings = None
 
         if _can_access_tab(admin_role, "support_tickets"):
             try:
@@ -1688,6 +1737,10 @@ def admin_dashboard(request: Request):
             "broadcast_status": broadcast_status or "",
             "broadcast_recent_logs": broadcast_recent_logs,
             "broadcast_audiences": BROADCAST_AUDIENCES,
+            "driver_monetization_status": driver_monetization_status or "",
+            "driver_monetization_settings": driver_monetization_settings,
+            "driver_monetization_rows": driver_monetization_rows,
+            "driver_monetization_recent_payments": driver_monetization_recent_payments,
             "audit_actor": audit_actor,
             "audit_action": audit_action,
             "audit_target": audit_target,
@@ -2018,6 +2071,196 @@ def admin_send_broadcast(
 
     return RedirectResponse(
         url="/admin?tab=broadcasts&broadcast_status=sent",
+        status_code=302,
+    )
+
+
+@router.post("/driver-monetization/settings")
+def admin_update_driver_monetization_settings(
+    request: Request,
+    driver_monthly_price: int = Form(...),
+    click_enabled: str | None = Form(default=None),
+    payme_enabled: str | None = Form(default=None),
+    driver_paid_mode_enabled: str | None = Form(default=None),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(url="/admin?tab=overview", status_code=302)
+    if driver_monthly_price < 0:
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=invalid_price",
+            status_code=302,
+        )
+    if driver_paid_mode_enabled and driver_monthly_price <= 0:
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=invalid_price",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        row = get_or_create_monetization_settings(db)
+        current_time = datetime.now(timezone.utc)
+        before_state = {
+            "driver_paid_mode_enabled": row.driver_paid_mode_enabled,
+            "driver_monthly_price": row.driver_monthly_price,
+            "click_enabled": row.click_enabled,
+            "payme_enabled": row.payme_enabled,
+        }
+        paid_mode_before = row.driver_paid_mode_enabled
+        row.driver_paid_mode_enabled = bool(driver_paid_mode_enabled)
+        row.driver_monthly_price = driver_monthly_price
+        row.click_enabled = bool(click_enabled)
+        row.payme_enabled = bool(payme_enabled)
+        row.updated_by = admin_session["username"]
+        db.add(row)
+        if paid_mode_before != row.driver_paid_mode_enabled:
+            subscriptions = db.scalars(select(DriverSubscription)).all()
+            for subscription in subscriptions:
+                sync_driver_subscription(
+                    db,
+                    subscription,
+                    row,
+                    now=current_time,
+                )
+        _write_admin_audit_log(
+            request=request,
+            db=db,
+            actor_username=admin_session["username"],
+            action="driver_monetization_settings_updated",
+            details=f"price={driver_monthly_price}",
+            before_state=before_state,
+            after_state={
+                "driver_paid_mode_enabled": row.driver_paid_mode_enabled,
+                "driver_monthly_price": row.driver_monthly_price,
+                "click_enabled": row.click_enabled,
+                "payme_enabled": row.payme_enabled,
+            },
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=driver_monetization&driver_monetization_status=settings_saved",
+        status_code=302,
+    )
+
+
+@router.post("/driver-monetization/subscriptions/grant")
+def admin_grant_driver_subscription(
+    request: Request,
+    user_id: int = Form(...),
+    months_count: int = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(url="/admin?tab=overview", status_code=302)
+    if months_count < 1 or months_count > 12:
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=invalid_months",
+            status_code=302,
+        )
+
+    db: Session = SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.id == user_id))
+        if not user:
+            return RedirectResponse(
+                url="/admin?tab=driver_monetization&driver_monetization_status=user_not_found",
+                status_code=302,
+            )
+        settings_row = get_or_create_monetization_settings(db)
+        subscription = extend_driver_subscription(
+            db,
+            user_id=user_id,
+            months_count=months_count,
+            amount=settings_row.driver_monthly_price * months_count,
+            provider="admin_grant",
+        )
+        _write_admin_audit_log(
+            request=request,
+            db=db,
+            actor_username=admin_session["username"],
+            action="driver_subscription_granted",
+            target_username=str(user_id),
+            details=f"months={months_count}",
+            after_state={
+                "remaining_seconds": subscription.remaining_seconds,
+                "status": subscription.status,
+            },
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=driver_monetization&driver_monetization_status=grant_ok",
+        status_code=302,
+    )
+
+
+@router.post("/driver-monetization/payments/mark-paid")
+def admin_mark_driver_payment_paid(
+    request: Request,
+    payment_id: int = Form(...),
+):
+    admin_session = _get_admin_session(request)
+    if not admin_session:
+        return RedirectResponse(url="/admin/login", status_code=302)
+    if admin_session["role"] != ADMIN_ROLE_SUPERADMIN:
+        return RedirectResponse(url="/admin?tab=overview", status_code=302)
+
+    db: Session = SessionLocal()
+    try:
+        payment = db.get(DriverPayment, payment_id)
+        if not payment:
+            return RedirectResponse(
+                url="/admin?tab=driver_monetization&driver_monetization_status=payment_not_found",
+                status_code=302,
+            )
+        mark_payment_paid(
+            db,
+            payment=payment,
+            note=f"confirmed_by={admin_session['username']}",
+        )
+        _write_admin_audit_log(
+            request=request,
+            db=db,
+            actor_username=admin_session["username"],
+            action="driver_payment_marked_paid",
+            target_username=str(payment.user_id),
+            details=f"payment_id={payment.id},provider={payment.provider}",
+            after_state={"payment_status": payment.status},
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        return RedirectResponse(
+            url="/admin?tab=driver_monetization&driver_monetization_status=db_error",
+            status_code=302,
+        )
+    finally:
+        db.close()
+
+    return RedirectResponse(
+        url="/admin?tab=driver_monetization&driver_monetization_status=payment_marked_paid",
         status_code=302,
     )
 

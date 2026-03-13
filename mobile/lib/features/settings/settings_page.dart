@@ -8,6 +8,7 @@ import 'package:taxi_mobile/core/formatters/uz_plate_formatter.dart';
 import 'package:taxi_mobile/core/i18n/strings.dart';
 import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/widgets/neo_shell.dart';
+import 'package:taxi_mobile/features/driver/driver_subscription_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../auth/auth_controller.dart';
@@ -146,6 +147,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
       return false;
     }
+    return true;
+  }
+
+  Future<bool> _handleDriverSubscriptionRequired(AppStrings s) async {
+    final activated = await showDriverSubscriptionSheet(
+      context,
+      ref,
+      title: "Haydovchi obunasi",
+      message:
+          "Haydovchi rejimiga o'tish uchun avval oylik to'lovni faollashtiring.",
+    );
+    if (!activated) {
+      return false;
+    }
+    await ref.read(authControllerProvider.notifier).setRole('driver');
     return true;
   }
 
@@ -369,15 +385,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             context.go('/driver-blocked');
                             return;
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(apiErrorMessage(
-                                e,
-                                fallback: s.t('generic_error'),
-                              )),
-                            ),
-                          );
-                          return;
+                          if (apiErrorCode(e) ==
+                                  'DRIVER_SUBSCRIPTION_REQUIRED' &&
+                              nextRole == 'driver') {
+                            try {
+                              final switched =
+                                  await _handleDriverSubscriptionRequired(s);
+                              if (!switched || !context.mounted) {
+                                return;
+                              }
+                            } catch (retryError) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(apiErrorMessage(
+                                    retryError,
+                                    fallback: s.t('generic_error'),
+                                  )),
+                                ),
+                              );
+                              return;
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(apiErrorMessage(
+                                  e,
+                                  fallback: s.t('generic_error'),
+                                )),
+                              ),
+                            );
+                            return;
+                          }
                         }
                         if (!context.mounted) return;
                         context.go(

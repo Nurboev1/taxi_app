@@ -13,6 +13,8 @@ import 'package:taxi_mobile/core/widgets/neo_sections.dart';
 import 'package:taxi_mobile/core/api/api_error.dart';
 import 'package:taxi_mobile/features/chat/chat_controller.dart';
 import 'package:taxi_mobile/features/driver/driver_blocked_page.dart';
+import 'package:taxi_mobile/features/driver/driver_monetization_controller.dart';
+import 'package:taxi_mobile/features/driver/driver_subscription_sheet.dart';
 import 'package:taxi_mobile/features/notifications/notifications_controller.dart';
 
 import '../auth/auth_controller.dart';
@@ -93,8 +95,16 @@ class _DriverHomePageState extends ConsumerState<DriverHomePage> {
     if (isBlocked) {
       return const DriverBlockedPage();
     }
+    final monetizationAsync = ref.watch(driverMonetizationProvider);
     final s = AppStrings.of(auth.profile?['language']?.toString());
     final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+
+    final monetization = monetizationAsync.valueOrNull;
+    if (monetization != null &&
+        monetization.enabled &&
+        !monetization.hasActiveSubscription) {
+      return const Scaffold(body: DriverSubscriptionRequiredView());
+    }
 
     final bg1 = isDark ? const Color(0xFF111827) : const Color(0xFFECFDF5);
     final bg2 = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
@@ -103,7 +113,11 @@ class _DriverHomePageState extends ConsumerState<DriverHomePage> {
       _DriverDashboard(s: s),
       _DriverTripsTab(s: s),
       _DriverChatTab(s: s),
-      _DriverProfileTab(s: s, isDark: isDark),
+      _DriverProfileTab(
+        s: s,
+        isDark: isDark,
+        monetization: monetization,
+      ),
     ];
     final tabContent = SafeArea(
       child: AnimatedSwitcher(
@@ -418,9 +432,14 @@ class _DriverTripsTab extends StatelessWidget {
 }
 
 class _DriverProfileTab extends ConsumerWidget {
-  const _DriverProfileTab({required this.s, required this.isDark});
+  const _DriverProfileTab({
+    required this.s,
+    required this.isDark,
+    required this.monetization,
+  });
   final AppStrings s;
   final bool isDark;
+  final DriverMonetizationInfo? monetization;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -468,6 +487,22 @@ class _DriverProfileTab extends ConsumerWidget {
           subtitle: s.t('settings_manage_subtitle'),
           onTap: () => context.push('/settings'),
         ),
+        if (monetization?.enabled == true)
+          NeoActionCard(
+            icon: Icons.workspace_premium_outlined,
+            title: "Haydovchi obunasi",
+            subtitle: monetization!.hasActiveSubscription
+                ? "Faol. Qolgan kun: ${monetization!.remainingDays}"
+                : "${monetization!.monthlyPrice} so'm / oy",
+            onTap: () => showDriverSubscriptionSheet(
+              context,
+              ref,
+              title: "Haydovchi obunasi",
+              message:
+                  "Haydovchi rejimining oylik to'lov holatini shu yerda boshqarishingiz mumkin.",
+            ),
+            tint: Theme.of(context).colorScheme.tertiary,
+          ),
         NeoActionCard(
           icon: Icons.support_agent_outlined,
           title: s.t('contact_support'),

@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     telegram_support_bot_username: str = "SafarUzSupportBot"
     telegram_support_webhook_secret: str = ""
     telegram_support_delete_sensitive_messages: bool = True
+    payment_return_url: str = "https://safaruz.duckdns.org/download"
+    click_service_id: str = ""
+    click_merchant_id: str = ""
+    click_secret_key: str = ""
+    click_checkout_url_template: str = ""
+    payme_merchant_id: str = ""
+    payme_secret_key: str = ""
+    payme_checkout_base_url: str = "https://checkout.paycom.uz"
+    payme_account_field: str = "payment_id"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

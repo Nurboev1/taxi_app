@@ -76,6 +76,11 @@ class SetRoleIn(BaseModel):
     role: UserRole
 
 
+class DriverCheckoutIn(BaseModel):
+    provider: str
+    months_count: int = Field(default=1, ge=1, le=12)
+
+
 class ProfileUpdateIn(BaseModel):
     first_name: str | None = None
     last_name: str | None = None

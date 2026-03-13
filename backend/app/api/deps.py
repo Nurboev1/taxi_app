@@ -9,6 +9,7 @@ from app.core.settings import settings
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
+from app.services.driver_monetization import enforce_driver_paid_access
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/verify-otp")
 
@@ -42,11 +43,16 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
 
 def require_role(role: UserRole):
-    def checker(user: User = Depends(get_current_user)) -> User:
+    def checker(
+        user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
         if user.role != role:
             raise HTTPException(status_code=403, detail="Sizda bu amal uchun ruxsat yo'q")
         if role == UserRole.driver and is_driver_blocked(user):
             raise HTTPException(status_code=403, detail={"code": "DRIVER_BLOCKED", "message": "Haydovchi akkaunti bloklangan"})
+        if role == UserRole.driver:
+            enforce_driver_paid_access(db, user)
         return user
 
     return checker
