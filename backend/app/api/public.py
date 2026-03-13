@@ -9,8 +9,9 @@ from app.core.settings import settings
 
 router = APIRouter(tags=["public"])
 REPO_ROOT = Path(__file__).resolve().parents[3]
-APK_PATH = REPO_ROOT / "release_assets" / "SafarUz-Android-v1.1.0.apk"
-APK_DOWNLOAD_NAME = "SafarUz-Android-v1.1.0.apk"
+APK_VERSION = "1.2.0"
+APK_PATH = REPO_ROOT / "release_assets" / f"SafarUz-Android-v{APK_VERSION}.apk"
+APK_DOWNLOAD_NAME = f"SafarUz-Android-v{APK_VERSION}.apk"
 templates = Jinja2Templates(
     directory=str(Path(__file__).resolve().parent.parent / "templates")
 )
@@ -33,6 +34,7 @@ def _public_context() -> dict[str, object]:
         "apk_available": apk_exists,
         "apk_download_url": "/download/apk",
         "apk_name": APK_DOWNLOAD_NAME,
+        "apk_version": APK_VERSION,
         "apk_size_mb": apk_size_mb,
         "apk_updated_at": apk_updated_at,
         "year": datetime.now().year,

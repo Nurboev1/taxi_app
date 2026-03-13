@@ -1,6 +1,6 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-13 (Asia/Samarkand, hidden driver paid mode scaffold added)
+Last updated: 2026-03-13 (Asia/Samarkand, hidden driver paid mode scaffold and APK v1.2.0 release update)
 Repository: `Nurboev1/taxi_app`
 Main branch head (local before this handoff update): `30058b8`
 
@@ -43,6 +43,10 @@ Main branch head (local before this handoff update): `30058b8`
   - Click/Payme checkout URL generation tayyor, lekin merchant callback/webhook bilan avtomatik `paid` tasdiqlash hali qilinmagan
   - productionda vaqtincha admin paneldagi `mark paid` orqali subscription faollashtiriladi
   - keyingi bosqich: Click/Payme webhook verify + payment status auto-activation
+- Public download sahifasi `v1.2.0`ga yangilandi:
+  - mobile version: `mobile/pubspec.yaml` -> `1.2.0+3`
+  - release asset nomi: `release_assets/SafarUz-Android-v1.2.0.apk`
+  - public download route endi shu faylni serve qiladi
 
 ## 0) So'nggi yangilanish (2026-03-11)
 
@@ -54,7 +58,7 @@ Main branch head (local before this handoff update): `30058b8`
   - footer ichidan `Privacy`, `Terms`, `Telegram support`, `Admin` linklari ko'rinadi
   - keyin public copy soddalashtirildi: texnik iboralar olib tashlanib, oddiy va ravon o'zbekcha matn qo'yildi
   - mobile responsive layout yaxshilandi: topbar, hero cards, CTA, section head va art-grid telefon ekraniga moslashtirildi
-  - APK yuklash sahifasi qo'shildi va release APK `release_assets/SafarUz-Android-v1.1.0.apk` sifatida repoga track qilinadi
+  - APK yuklash sahifasi qo'shildi va release APK `release_assets/` ichida versionlangan nom bilan repoga track qilinadi
   - `.gitignore` faqat `release_assets/*.apk` ni qabul qiladigan qilib toraytirildi
 - Mobile notification duplicate muammosi tuzatildi:
   - FCM token mavjud qurilmalarda local poller endi telefon notification chiqarmaydi
