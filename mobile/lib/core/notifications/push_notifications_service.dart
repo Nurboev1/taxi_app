@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,11 @@ import 'local_notifications_service.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Background/terminated push handling entry point.
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {
+    // Ignore duplicate or missing local config initialization.
+  }
 }
 
 class PushNotificationsService {
@@ -29,6 +35,11 @@ class PushNotificationsService {
 
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission(alert: true, badge: true, sound: true);
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
       final token = await messaging.getToken();
       if (token != null && token.isNotEmpty) {

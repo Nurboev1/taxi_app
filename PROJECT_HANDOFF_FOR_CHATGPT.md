@@ -872,6 +872,30 @@ Backendda service account json gitga qo'shilmaydi (`backend/.gitignore`da bor).
 
 ---
 
+## 13) iOS readiness (2026-03-14)
+
+- iOS tayyorlash boshlandi, maqsad: Androiddagi asosiy behaviorni iOSda ham ishlatish.
+- Qo'shilganlar:
+  - `mobile/ios/Podfile`
+  - `mobile/IOS_SETUP.md`
+- iOS konfiguratsiya o'zgarishlari:
+  - bundle id: `uz.safaruz.mobile`
+  - `Info.plist`ga `UIBackgroundModes = fetch, remote-notification` qo'shildi
+  - `AppDelegate.swift`da `UNUserNotificationCenter.current().delegate = self` qo'shildi
+- Flutter notification layer iOS-aware qilindi:
+  - `LocalNotificationsService` endi Darwin/iOS initialization va iOS local notification details ishlatadi
+  - `PushNotificationsService` endi iOS foreground presentation options yoqadi
+  - background handler Firebase initialization bilan mustahkamlandi
+- `.gitignore` yangilandi:
+  - `mobile/ios/Runner/GoogleService-Info.plist` track qilinmaydi
+  - generated iOS Flutter build configlar track qilinmaydi
+- Hali macOS/Xcode tomonda bajariladigan ishlar qoladi:
+  - `GoogleService-Info.plist`ni Firebase iOS appdan olib qo'yish
+  - Apple signing team tanlash
+  - Xcode'da `Push Notifications` va `Background Modes` capabilitylarini yoqish
+  - `pod install`
+  - real iPhone/Hackintosh'da push flow test qilish
+
 ## 13) Tez tekshiruv checklist
 
 Backend:
