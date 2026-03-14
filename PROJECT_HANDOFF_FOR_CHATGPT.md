@@ -1,8 +1,17 @@
 ﻿# SafarUz Project Handoff (for next ChatGPT)
 
-Last updated: 2026-03-13 (Asia/Samarkand, hidden driver paid mode scaffold and APK v1.2.0 release update)
+Last updated: 2026-03-14 (Asia/Tashkent, handoff consistency check after hidden driver paid mode and APK v1.2.0 release)
 Repository: `Nurboev1/taxi_app`
-Main branch head (local before this handoff update): `30058b8`
+Main branch head (local before this handoff update): `9129255`
+
+## Handoff sanity check (2026-03-14)
+
+- Handoffdagi 2026-03-13, 2026-03-11 va 2026-03-08 bo'limlari oxirgi commitlar bilan mos keladi.
+- Eng yangi commitlar:
+  - `9129255` Release Android APK v1.2.0 and update download page
+  - `4a991df` Add hidden driver paid mode and mobile paywall flow
+  - `30058b8` Add public APK download page and tracked release APK
+- Local worktree'da handoff tekshiruv paytida `backend/.env.example` dirty bo'lishi mumkin; bu odatda user local config o'zgarishi bo'lib, commitga tasodifan qo'shilmasligi kerak.
 
 ## 0) So'nggi yangilanish (2026-03-13)
 
